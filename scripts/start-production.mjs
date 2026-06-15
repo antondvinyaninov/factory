@@ -21,6 +21,28 @@ function run(command, args, options = {}) {
   })
 }
 
+async function runWithRetry(command, args, { attempts = 20, delayMs = 3000 } = {}) {
+  let lastError
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await run(command, args)
+      return
+    } catch (error) {
+      lastError = error
+      console.log(
+        `${command} ${args.join(" ")} failed, retry ${attempt}/${attempts}`,
+      )
+
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
+      }
+    }
+  }
+
+  throw lastError
+}
+
 function start(name, command, args, env) {
   const child = spawn(command, args, {
     env: {
@@ -55,11 +77,11 @@ process.on("SIGINT", stopAll)
 process.on("SIGTERM", stopAll)
 
 if (process.env.RUN_DB_PUSH === "true") {
-  await run("pnpm", ["--filter", "api", "db:push"])
+  await runWithRetry("pnpm", ["--filter", "api", "db:push"])
 }
 
 if (process.env.SEED_ADMIN === "true") {
-  await run("pnpm", ["--filter", "api", "db:seed:admin"])
+  await runWithRetry("pnpm", ["--filter", "api", "db:seed:admin"])
 }
 
 const webServerPath = [
