@@ -1,0 +1,22 @@
+{
+  "name": "factory-1",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.22.0",
+  "description": "Factory 1.0: корпоративный портал завода на Next.js + NestJS",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm dev:web",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api start:dev",
+    "build": "pnpm --filter web build && pnpm --filter api build",
+    "lint": "pnpm --filter web lint && pnpm --filter api lint",
+    "test": "pnpm --filter api test"
+  },
+  "devDependencies": {
+    "shadcn": "^4.11.0"
+  }
+}
