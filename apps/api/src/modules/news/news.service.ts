@@ -41,25 +41,30 @@ export class NewsService {
     const { title, content } = this.preparePayload(dto);
     const attachments = mapNewsAttachments(files);
 
-    return this.prisma.newsPost.create({
-      data: {
-        title,
-        content,
-        attachments: attachments,
-        authorId: author.id,
-        isPublished: true,
-        publishedAt: new Date(),
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    try {
+      return await this.prisma.newsPost.create({
+        data: {
+          title,
+          content,
+          attachments: attachments,
+          authorId: author.id,
+          isPublished: true,
+          publishedAt: new Date(),
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      deleteNewsAttachmentFiles(attachments);
+      throw error;
+    }
   }
 
   async update(id: string, dto: UpdateNewsPostDto, author: AuthUser) {
