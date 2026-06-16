@@ -5,7 +5,7 @@ import Image from "next/image"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -23,12 +23,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import {
+  CircleFadingArrowUpIcon,
   EllipsisVerticalIcon,
   FileTextIcon,
   PaperclipIcon,
   PencilIcon,
   TrashIcon,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
   typographyStyles,
   TypographyH2,
@@ -177,11 +179,13 @@ export default function NewsPage() {
   const [editingId, setEditingId] = React.useState<string | null>(null)
   const [editingTitle, setEditingTitle] = React.useState("")
   const [editingContent, setEditingContent] = React.useState("")
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [isPublishing, setIsPublishing] = React.useState(false)
   const [savingId, setSavingId] = React.useState<string | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const [error, setError] = React.useState("")
+  const attachmentsInputRef = React.useRef<HTMLInputElement>(null)
 
   const loadCurrentUser = React.useCallback(async () => {
     try {
@@ -262,6 +266,7 @@ export default function NewsPage() {
       }
 
       form.reset()
+      setSelectedFiles([])
       await loadNews()
     } catch {
       setError("Не удалось подключиться к API")
@@ -281,6 +286,18 @@ export default function NewsPage() {
     setEditingId(null)
     setEditingTitle("")
     setEditingContent("")
+  }
+
+  function handleAttachmentsChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setSelectedFiles(Array.from(event.target.files ?? []))
+  }
+
+  function clearSelectedFiles() {
+    if (attachmentsInputRef.current) {
+      attachmentsInputRef.current.value = ""
+    }
+
+    setSelectedFiles([])
   }
 
   async function handleUpdate(itemId: string) {
@@ -394,16 +411,74 @@ export default function NewsPage() {
                     Вложения
                   </TypographySmall>
                   <Input
+                    ref={attachmentsInputRef}
+                    id="news-attachments"
                     name="attachments"
                     type="file"
                     multiple
                     accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
-                    className="cursor-pointer"
+                    className="sr-only"
+                    onChange={handleAttachmentsChange}
                   />
+                  <label
+                    htmlFor="news-attachments"
+                    className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/20 p-5 text-center transition-colors hover:border-primary/50 hover:bg-muted/40"
+                  >
+                    <span
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "icon" }),
+                        "size-11 rounded-xl bg-background",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <CircleFadingArrowUpIcon className="size-5" />
+                    </span>
+                    <span className="flex flex-col gap-1">
+                      <span className="text-sm font-medium">
+                        Добавить медиа или документы
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Нажмите, чтобы выбрать файлы
+                      </span>
+                    </span>
+                  </label>
                   <TypographyMuted className="text-xs">
                     Можно прикрепить до 8 файлов: фото, видео или документы до 50
                     МБ каждый.
                   </TypographyMuted>
+                  {selectedFiles.length > 0 ? (
+                    <div className="grid gap-2 rounded-lg border bg-muted/20 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <TypographySmall>
+                          Выбрано файлов: {selectedFiles.length}
+                        </TypographySmall>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearSelectedFiles}
+                        >
+                          Очистить
+                        </Button>
+                      </div>
+                      <div className="grid gap-1.5">
+                        {selectedFiles.map((file) => (
+                          <div
+                            key={`${file.name}-${file.size}-${file.lastModified}`}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <FileTextIcon className="size-4 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 truncate">
+                              {file.name}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {formatFileSize(file.size)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-3">
                   <Button type="submit" disabled={isPublishing}>
