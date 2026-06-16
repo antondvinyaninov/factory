@@ -16,6 +16,7 @@ async function bootstrap() {
   );
   app.use(cookieParser());
   app.use('/uploads', express.static(getUploadsRoot()));
+  app.use('/api/uploads', express.static(getUploadsRoot()));
   app.enableCors({
     origin: process.env.WEB_ORIGIN?.split(',').map((origin) =>
       origin.trim(),
