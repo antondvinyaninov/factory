@@ -12,8 +12,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import {
+  EllipsisVerticalIcon,
+  PencilIcon,
+  TrashIcon,
+} from "lucide-react"
 
 type NewsPost = {
   id: string
@@ -346,7 +358,7 @@ export default function NewsPage() {
                         </div>
                       </div>
                       {isAuthor ? (
-                        <div className="flex shrink-0 gap-2">
+                        <div className="flex shrink-0 items-center gap-2">
                           {isEditing ? (
                             <Button
                               type="button"
@@ -356,22 +368,45 @@ export default function NewsPage() {
                               Отмена
                             </Button>
                           ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => startEditing(item)}
-                            >
-                              Редактировать
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                render={
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-muted-foreground data-open:bg-muted"
+                                  />
+                                }
+                              >
+                                <EllipsisVerticalIcon />
+                                <span className="sr-only">
+                                  Действия с новостью
+                                </span>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem
+                                  onClick={() => startEditing(item)}
+                                >
+                                  <PencilIcon />
+                                  <span>Редактировать</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  disabled={deletingId === item.id}
+                                  onClick={() => handleDelete(item.id)}
+                                >
+                                  <TrashIcon />
+                                  <span>
+                                    {deletingId === item.id
+                                      ? "Удаляем..."
+                                      : "Удалить"}
+                                  </span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            disabled={deletingId === item.id}
-                            onClick={() => handleDelete(item.id)}
-                          >
-                            {deletingId === item.id ? "Удаляем..." : "Удалить"}
-                          </Button>
                         </div>
                       ) : null}
                     </div>
