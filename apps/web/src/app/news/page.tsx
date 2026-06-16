@@ -3,6 +3,7 @@
 import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -23,6 +24,7 @@ type NewsPost = {
   author: {
     name: string
     email: string
+    avatar?: string
   }
 }
 
@@ -33,6 +35,20 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
   hour: "2-digit",
   minute: "2-digit",
 })
+
+function getInitials(name: string, email: string) {
+  const source = name || email
+  const parts = source
+    .replace(/@.*/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+}
 
 export default function NewsPage() {
   const [items, setItems] = React.useState<NewsPost[]>([])
@@ -181,14 +197,31 @@ export default function NewsPage() {
 
             {items.map((item) => (
               <Card key={item.id}>
-                <CardHeader>
+                <CardHeader className="gap-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar size="lg">
+                      {item.author.avatar ? (
+                        <AvatarImage
+                          src={item.author.avatar}
+                          alt={item.author.name || item.author.email}
+                        />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 font-medium text-primary">
+                        {getInitials(item.author.name, item.author.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">
+                        {item.author.name || item.author.email}
+                      </div>
+                      <CardDescription>
+                        {dateFormatter.format(
+                          new Date(item.publishedAt ?? item.createdAt),
+                        )}
+                      </CardDescription>
+                    </div>
+                  </div>
                   <CardTitle>{item.title}</CardTitle>
-                  <CardDescription>
-                    {item.author.name || item.author.email} ·{" "}
-                    {dateFormatter.format(
-                      new Date(item.publishedAt ?? item.createdAt),
-                    )}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="whitespace-pre-wrap leading-7">{item.content}</p>
