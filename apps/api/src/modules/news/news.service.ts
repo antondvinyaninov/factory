@@ -8,6 +8,10 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthUser } from '../auth/auth.types';
 import { CreateNewsPostDto } from './dto/create-news-post.dto';
 import { UpdateNewsPostDto } from './dto/update-news-post.dto';
+import {
+  deleteNewsAttachmentFiles,
+  mapNewsAttachments,
+} from './news-attachments';
 
 @Injectable()
 export class NewsService {
@@ -29,13 +33,19 @@ export class NewsService {
     });
   }
 
-  async create(dto: CreateNewsPostDto, author: AuthUser) {
+  async create(
+    dto: CreateNewsPostDto,
+    author: AuthUser,
+    files: Express.Multer.File[] = [],
+  ) {
     const { title, content } = this.preparePayload(dto);
+    const attachments = mapNewsAttachments(files);
 
     return this.prisma.newsPost.create({
       data: {
         title,
         content,
+        attachments: attachments,
         authorId: author.id,
         isPublished: true,
         publishedAt: new Date(),
@@ -81,6 +91,8 @@ export class NewsService {
       where: { id: existingPost.id },
     });
 
+    deleteNewsAttachmentFiles(existingPost.attachments);
+
     return { status: 'ok' };
   }
 
@@ -105,6 +117,7 @@ export class NewsService {
       select: {
         id: true,
         authorId: true,
+        attachments: true,
       },
     });
 

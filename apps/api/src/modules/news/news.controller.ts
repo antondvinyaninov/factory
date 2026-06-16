@@ -8,12 +8,16 @@ import {
   Post,
   Req,
   UnauthorizedException,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { AuthUser } from '../auth/auth.types';
 import { CreateNewsPostDto } from './dto/create-news-post.dto';
 import { UpdateNewsPostDto } from './dto/update-news-post.dto';
+import { getNewsUploadOptions } from './news-attachments';
 import { NewsService } from './news.service';
 
 const SESSION_COOKIE_NAME = 'factory_session';
@@ -40,9 +44,18 @@ export class NewsController {
   }
 
   @Post()
-  async create(@Req() request: Request, @Body() dto: CreateNewsPostDto) {
+  @UseInterceptors(FilesInterceptor('attachments', 8, getNewsUploadOptions()))
+  async create(
+    @Req() request: Request,
+    @Body() dto: CreateNewsPostDto,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+  ) {
     return {
-      item: await this.newsService.create(dto, await this.getUser(request)),
+      item: await this.newsService.create(
+        dto,
+        await this.getUser(request),
+        files,
+      ),
     };
   }
 

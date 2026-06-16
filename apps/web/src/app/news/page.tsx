@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,14 +24,26 @@ import { Input } from "@/components/ui/input"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import {
   EllipsisVerticalIcon,
+  FileTextIcon,
+  PaperclipIcon,
   PencilIcon,
   TrashIcon,
 } from "lucide-react"
+
+type NewsAttachment = {
+  id: string
+  name: string
+  mimeType: string
+  size: number
+  url: string
+  kind: "image" | "video" | "document"
+}
 
 type NewsPost = {
   id: string
   title: string
   content: string
+  attachments?: NewsAttachment[]
   publishedAt: string | null
   createdAt: string
   author: {
@@ -67,6 +80,88 @@ function getInitials(name: string, email: string) {
     .map((part) => part[0])
     .join("")
     .toUpperCase()
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} КБ`
+  }
+
+  return `${(size / 1024 / 1024).toFixed(1)} МБ`
+}
+
+function NewsAttachments({ attachments }: { attachments: NewsAttachment[] }) {
+  const images = attachments.filter((attachment) => attachment.kind === "image")
+  const videos = attachments.filter((attachment) => attachment.kind === "video")
+  const documents = attachments.filter(
+    (attachment) => attachment.kind === "document",
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      {images.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {images.map((attachment) => (
+            <a
+              key={attachment.id}
+              href={attachment.url}
+              target="_blank"
+              rel="noreferrer"
+              className="overflow-hidden rounded-lg border bg-muted/30"
+            >
+              <Image
+                src={attachment.url}
+                alt={attachment.name}
+                width={800}
+                height={450}
+                unoptimized
+                className="h-56 w-full object-cover transition-transform hover:scale-[1.02]"
+              />
+            </a>
+          ))}
+        </div>
+      ) : null}
+
+      {videos.length > 0 ? (
+        <div className="grid gap-3">
+          {videos.map((attachment) => (
+            <video
+              key={attachment.id}
+              src={attachment.url}
+              controls
+              className="max-h-[420px] w-full rounded-lg border bg-black"
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {documents.length > 0 ? (
+        <div className="grid gap-2">
+          {documents.map((attachment) => (
+            <a
+              key={attachment.id}
+              href={attachment.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-muted/50"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <FileTextIcon className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">
+                  {attachment.name}
+                </span>
+                <span className="text-muted-foreground">
+                  {formatFileSize(attachment.size)}
+                </span>
+              </span>
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 export default function NewsPage() {
@@ -150,13 +245,7 @@ export default function NewsPage() {
         {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: String(formData.get("title") ?? ""),
-            content: String(formData.get("content") ?? ""),
-          }),
+          body: formData,
         },
       )
 
@@ -290,6 +379,23 @@ export default function NewsPage() {
                   required
                   className="min-h-32 resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                 />
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <PaperclipIcon className="size-4" />
+                    Вложения
+                  </div>
+                  <Input
+                    name="attachments"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                    className="cursor-pointer"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Можно прикрепить до 8 файлов: фото, видео или документы до 50
+                    МБ каждый.
+                  </p>
+                </div>
                 <div className="flex items-center gap-3">
                   <Button type="submit" disabled={isPublishing}>
                     {isPublishing ? "Публикуем..." : "Опубликовать"}
@@ -329,6 +435,7 @@ export default function NewsPage() {
             {items.map((item) => {
               const isAuthor = item.author.id === currentUser?.id
               const isEditing = editingId === item.id
+              const attachments = item.attachments ?? []
 
               return (
                 <Card key={item.id}>
@@ -449,6 +556,11 @@ export default function NewsPage() {
                         {item.content}
                       </p>
                     )}
+                    {attachments.length > 0 ? (
+                      <div className="mt-5">
+                        <NewsAttachments attachments={attachments} />
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               )

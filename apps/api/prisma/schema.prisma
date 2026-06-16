@@ -31,6 +31,7 @@ model NewsPost {
   id          String    @id @default(cuid())
   title       String
   content     String
+  attachments Json      @default("[]")
   isPublished Boolean   @default(true)
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
