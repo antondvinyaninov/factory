@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  Patch,
   Post,
   Req,
   UnauthorizedException,
@@ -10,6 +13,7 @@ import type { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { AuthUser } from '../auth/auth.types';
 import { CreateNewsPostDto } from './dto/create-news-post.dto';
+import { UpdateNewsPostDto } from './dto/update-news-post.dto';
 import { NewsService } from './news.service';
 
 const SESSION_COOKIE_NAME = 'factory_session';
@@ -37,7 +41,25 @@ export class NewsController {
 
   @Post()
   async create(@Req() request: Request, @Body() dto: CreateNewsPostDto) {
-    return { item: await this.newsService.create(dto, await this.getUser(request)) };
+    return {
+      item: await this.newsService.create(dto, await this.getUser(request)),
+    };
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() request: Request,
+    @Param('id') id: string,
+    @Body() dto: UpdateNewsPostDto,
+  ) {
+    return {
+      item: await this.newsService.update(id, dto, await this.getUser(request)),
+    };
+  }
+
+  @Delete(':id')
+  async remove(@Req() request: Request, @Param('id') id: string) {
+    return this.newsService.remove(id, await this.getUser(request));
   }
 
   private async getUser(request: Request): Promise<AuthUser> {
