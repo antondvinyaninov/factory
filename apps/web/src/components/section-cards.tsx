@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { typographyStyles } from "@/components/ui/typography"
 import { TrendingUpIcon, TrendingDownIcon } from "lucide-react"
 
 export function SectionCards() {
@@ -16,8 +17,10 @@ export function SectionCards() {
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Новости</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+          <CardDescription className={typographyStyles.muted}>
+            Новости
+          </CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight tabular-nums @[250px]/card:text-3xl">
             24
           </CardTitle>
           <CardAction>
@@ -29,19 +32,21 @@ export function SectionCards() {
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
+          <div className="line-clamp-1 flex gap-2 text-sm font-medium">
             Новые публикации за неделю{" "}
             <TrendingUpIcon className="size-4" />
           </div>
-          <div className="text-muted-foreground">
+          <div className={typographyStyles.muted}>
             Объявления и важные сообщения
           </div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Документы</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+          <CardDescription className={typographyStyles.muted}>
+            Документы
+          </CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight tabular-nums @[250px]/card:text-3xl">
             1 234
           </CardTitle>
           <CardAction>
@@ -53,19 +58,21 @@ export function SectionCards() {
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
+          <div className="line-clamp-1 flex gap-2 text-sm font-medium">
             Новые файлы и регламенты{" "}
             <TrendingDownIcon className="size-4" />
           </div>
-          <div className="text-muted-foreground">
+          <div className={typographyStyles.muted}>
             Хранятся внутри периметра
           </div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Сотрудники</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+          <CardDescription className={typographyStyles.muted}>
+            Сотрудники
+          </CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight tabular-nums @[250px]/card:text-3xl">
             456
           </CardTitle>
           <CardAction>
@@ -77,17 +84,19 @@ export function SectionCards() {
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
+          <div className="line-clamp-1 flex gap-2 text-sm font-medium">
             Активные пользователи портала{" "}
             <TrendingUpIcon className="size-4" />
           </div>
-          <div className="text-muted-foreground">Профили, отделы и роли</div>
+          <div className={typographyStyles.muted}>Профили, отделы и роли</div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Задачи</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+          <CardDescription className={typographyStyles.muted}>
+            Задачи
+          </CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight tabular-nums @[250px]/card:text-3xl">
             37
           </CardTitle>
           <CardAction>
@@ -99,11 +108,13 @@ export function SectionCards() {
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="line-clamp-1 flex gap-2 font-medium">
+          <div className="line-clamp-1 flex gap-2 text-sm font-medium">
             В работе и на согласовании{" "}
             <TrendingUpIcon className="size-4" />
           </div>
-          <div className="text-muted-foreground">Заявки, поручения, контроль</div>
+          <div className={typographyStyles.muted}>
+            Заявки, поручения, контроль
+          </div>
         </CardFooter>
       </Card>
     </div>

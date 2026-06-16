@@ -29,6 +29,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
+import { typographyStyles } from "@/components/ui/typography"
 
 export const description = "An interactive area chart"
 
@@ -146,7 +147,11 @@ export function ChartAreaInteractive() {
 
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange("7d")
+      const timeoutId = window.setTimeout(() => {
+        setTimeRange("7d")
+      }, 0)
+
+      return () => window.clearTimeout(timeoutId)
     }
   }, [isMobile])
 
@@ -167,12 +172,14 @@ export function ChartAreaInteractive() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Total Visitors</CardTitle>
-        <CardDescription>
+        <CardTitle className={typographyStyles.large}>
+          Активность портала
+        </CardTitle>
+        <CardDescription className={typographyStyles.muted}>
           <span className="hidden @[540px]/card:block">
-            Total for the last 3 months
+            Динамика за последние 3 месяца
           </span>
-          <span className="@[540px]/card:hidden">Last 3 months</span>
+          <span className="@[540px]/card:hidden">Последние 3 месяца</span>
         </CardDescription>
         <CardAction>
           <ToggleGroup

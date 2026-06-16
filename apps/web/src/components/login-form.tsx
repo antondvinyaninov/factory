@@ -18,6 +18,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { typographyStyles } from "@/components/ui/typography"
 
 export function LoginForm({
   className,
@@ -68,8 +69,8 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Вход</CardTitle>
-          <CardDescription>
+          <CardTitle className={typographyStyles.h4}>Вход</CardTitle>
+          <CardDescription className={typographyStyles.muted}>
             Используйте корпоративную учётную запись
           </CardDescription>
         </CardHeader>
@@ -92,7 +93,7 @@ export function LoginForm({
                   <FieldLabel htmlFor="password">Пароль</FieldLabel>
                   <a
                     href="#"
-                    className="ml-auto text-sm underline-offset-4 hover:underline"
+                    className="ml-auto text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                   >
                     Забыли пароль?
                   </a>
