@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${process.env.INTERNAL_API_URL ?? "http://127.0.0.1:3001"}/:path*`,
       },
+      {
+        source: "/uploads/:path*",
+        destination: `${process.env.INTERNAL_API_URL ?? "http://127.0.0.1:3001"}/uploads/:path*`,
+      },
     ]
   },
 };
