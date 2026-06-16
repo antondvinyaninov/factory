@@ -1049,6 +1049,8 @@ export default function NewsPage() {
     const form = event.currentTarget
     const formData = new FormData(form)
     const content = String(formData.get("content") ?? "").trim()
+    const targetParentCommentId =
+      parentCommentId || String(formData.get("parentId") ?? "").trim() || undefined
 
     if (!content) {
       setCommentingId(null)
@@ -1058,7 +1060,7 @@ export default function NewsPage() {
     const optimisticComment: NewsComment = {
       id: `pending-${Date.now()}`,
       content,
-      parentId: parentCommentId ?? null,
+      parentId: targetParentCommentId ?? null,
       createdAt: new Date().toISOString(),
       author: currentUser ?? {
         id: "current-user",
@@ -1074,7 +1076,7 @@ export default function NewsPage() {
     setItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
-          ? addCommentToPost(item, optimisticComment, parentCommentId)
+          ? addCommentToPost(item, optimisticComment, targetParentCommentId)
           : item,
       ),
     )
@@ -1088,7 +1090,10 @@ export default function NewsPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ content, parentId: parentCommentId }),
+          body: JSON.stringify({
+            content,
+            parentId: targetParentCommentId,
+          }),
         },
       )
 
@@ -1632,6 +1637,11 @@ export default function NewsPage() {
                                         </button>
                                       </div>
                                       <div className="flex items-center gap-2">
+                                        <input
+                                          type="hidden"
+                                          name="parentId"
+                                          value={comment.id}
+                                        />
                                         <Input
                                           name="content"
                                           placeholder="Написать ответ"
