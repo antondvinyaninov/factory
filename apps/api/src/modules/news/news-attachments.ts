@@ -85,6 +85,16 @@ export function getUploadsRoot() {
   return process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
 }
 
+export function getUploadsStaticRoots() {
+  return Array.from(
+    new Set([
+      getUploadsRoot(),
+      join(process.cwd(), 'uploads'),
+      join(process.cwd(), 'apps/api/uploads'),
+    ]),
+  );
+}
+
 export function getNewsUploadsDir() {
   return join(getUploadsRoot(), 'news');
 }

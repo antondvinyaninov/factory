@@ -3,7 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import { AppModule } from './app.module';
-import { getUploadsRoot } from './modules/news/news-attachments';
+import { getUploadsStaticRoots } from './modules/news/news-attachments';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,8 +15,10 @@ async function bootstrap() {
     }),
   );
   app.use(cookieParser());
-  app.use('/uploads', express.static(getUploadsRoot()));
-  app.use('/api/uploads', express.static(getUploadsRoot()));
+  for (const uploadsRoot of getUploadsStaticRoots()) {
+    app.use('/uploads', express.static(uploadsRoot));
+    app.use('/api/uploads', express.static(uploadsRoot));
+  }
   app.enableCors({
     origin: process.env.WEB_ORIGIN?.split(',').map((origin) =>
       origin.trim(),
