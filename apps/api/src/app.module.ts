@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseHealthService } from './database/database-health.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { NewsModule } from './modules/news/news.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthModule } from './modules/auth/auth.module';
     }),
     DatabaseModule,
     AuthModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

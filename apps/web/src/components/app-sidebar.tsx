@@ -33,13 +33,12 @@ const data = {
   navMain: [
     {
       title: "Обзор",
-      url: "#",
+      url: "/dashboard",
       icon: <IconDashboard />,
-      isActive: true,
     },
     {
       title: "Новости",
-      url: "#",
+      url: "/news",
       icon: <IconListDetails />,
     },
     {

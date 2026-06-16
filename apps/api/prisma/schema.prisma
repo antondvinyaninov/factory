@@ -22,6 +22,23 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  newsPosts    NewsPost[]
 
   @@map("users")
+}
+
+model NewsPost {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  isPublished Boolean   @default(true)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([isPublished, publishedAt])
+  @@index([authorId])
+  @@map("news_posts")
 }
