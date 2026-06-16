@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthUser } from '../auth/auth.types';
+import { CreateNewsCommentDto } from './dto/create-news-comment.dto';
 import { CreateNewsPostDto } from './dto/create-news-post.dto';
 import { UpdateNewsPostDto } from './dto/update-news-post.dto';
 import {
@@ -17,8 +18,8 @@ import {
 export class NewsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findPublished() {
-    return this.prisma.newsPost.findMany({
+  async findPublished(viewer?: AuthUser) {
+    const posts = await this.prisma.newsPost.findMany({
       where: { isPublished: true },
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       include: {
@@ -29,8 +30,52 @@ export class NewsService {
             email: true,
           },
         },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        comments: {
+          where: { parentId: null },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            replies: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                author: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
       },
     });
+
+    return posts.map(({ likes, _count, ...post }) => ({
+      ...post,
+      likesCount: likes.length,
+      likedByMe: viewer
+        ? likes.some((like) => like.userId === viewer.id)
+        : false,
+      commentsCount: _count.comments,
+    }));
   }
 
   async create(
@@ -101,6 +146,102 @@ export class NewsService {
     return { status: 'ok' };
   }
 
+  async toggleLike(id: string, user: AuthUser) {
+    await this.ensurePublishedPost(id);
+
+    const existingLike = await this.prisma.newsLike.findUnique({
+      where: {
+        postId_userId: {
+          postId: id,
+          userId: user.id,
+        },
+      },
+    });
+
+    if (existingLike) {
+      await this.prisma.newsLike.delete({
+        where: { id: existingLike.id },
+      });
+    } else {
+      await this.prisma.newsLike.create({
+        data: {
+          postId: id,
+          userId: user.id,
+        },
+      });
+    }
+
+    const likesCount = await this.prisma.newsLike.count({
+      where: { postId: id },
+    });
+
+    return {
+      liked: !existingLike,
+      likesCount,
+    };
+  }
+
+  async addComment(id: string, dto: CreateNewsCommentDto, author: AuthUser) {
+    await this.ensurePublishedPost(id);
+
+    const content = dto.content.trim();
+
+    if (!content) {
+      throw new BadRequestException('Comment is empty');
+    }
+
+    const parentId = dto.parentId?.trim();
+
+    if (parentId) {
+      const parentComment = await this.prisma.newsComment.findFirst({
+        where: {
+          id: parentId,
+          postId: id,
+          parentId: null,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!parentComment) {
+        throw new NotFoundException('Parent comment not found');
+      }
+    }
+
+    return {
+      comment: await this.prisma.newsComment.create({
+        data: {
+          postId: id,
+          authorId: author.id,
+          content,
+          parentId: parentId || null,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          replies: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              author: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    };
+  }
+
   private preparePayload(dto: CreateNewsPostDto | UpdateNewsPostDto) {
     const title = dto.title?.trim();
     const content = dto.content?.trim();
@@ -135,5 +276,23 @@ export class NewsService {
     }
 
     return existingPost;
+  }
+
+  private async ensurePublishedPost(id: string) {
+    const post = await this.prisma.newsPost.findFirst({
+      where: {
+        id,
+        isPublished: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException('News post not found');
+    }
+
+    return post;
   }
 }

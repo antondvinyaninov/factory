@@ -23,6 +23,8 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   newsPosts    NewsPost[]
+  newsLikes    NewsLike[]
+  newsComments NewsComment[]
 
   @@map("users")
 }
@@ -38,8 +40,42 @@ model NewsPost {
   updatedAt   DateTime  @updatedAt
   authorId    String
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes       NewsLike[]
+  comments    NewsComment[]
 
   @@index([isPublished, publishedAt])
   @@index([authorId])
   @@map("news_posts")
+}
+
+model NewsLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      NewsPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("news_likes")
+}
+
+model NewsComment {
+  id        String   @id @default(cuid())
+  content   String
+  postId    String
+  authorId  String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      NewsPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    NewsComment?  @relation("NewsCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   NewsComment[] @relation("NewsCommentReplies")
+
+  @@index([postId, createdAt])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("news_comments")
 }

@@ -37,7 +37,7 @@ const data = {
       icon: <IconDashboard />,
     },
     {
-      title: "Новости",
+      title: "Лента",
       url: "/news",
       icon: <IconListDetails />,
     },
