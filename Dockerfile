@@ -37,8 +37,13 @@ ENV PORT="3000"
 ENV API_PORT="3001"
 ENV INTERNAL_API_URL="http://127.0.0.1:3001"
 ENV COOKIE_SECURE="true"
+ENV UPLOADS_DIR="/data/uploads"
 
 COPY --from=builder /app /app
+
+RUN mkdir -p /data/uploads
+
+VOLUME ["/data/uploads"]
 
 EXPOSE 3000
 
