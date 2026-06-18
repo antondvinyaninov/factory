@@ -27,7 +27,7 @@ const items: MobileNavItem[] = [
   },
   {
     title: "Задачи",
-    url: "#",
+    url: "/tasks",
     icon: IconFolder,
   },
   {
@@ -52,12 +52,14 @@ function getInitials(name: string, email: string) {
 export function MobileBottomNav({
   currentUser,
   onCreatePost,
+  createLabel = "Добавить пост",
 }: {
   currentUser?: {
     name: string
     email: string
   } | null
   onCreatePost?: () => void
+  createLabel?: string
 }) {
   const pathname = usePathname()
   const [feedItem, tasksItem, messagesItem] = items
@@ -93,7 +95,7 @@ export function MobileBottomNav({
           onClick={onCreatePost}
         >
           <IconPlus className="size-6" />
-          <span className="sr-only">Добавить пост</span>
+          <span className="sr-only">{createLabel}</span>
         </Button>
         {(() => {
           const Icon = messagesItem.icon

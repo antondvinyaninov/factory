@@ -13,6 +13,20 @@ enum UserRole {
   USER
 }
 
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -25,6 +39,8 @@ model User {
   newsPosts    NewsPost[]
   newsLikes    NewsLike[]
   newsComments NewsComment[]
+  createdTasks Task[] @relation("TaskCreator")
+  assignedTasks Task[] @relation("TaskAssignee")
 
   @@map("users")
 }
@@ -78,4 +94,25 @@ model NewsComment {
   @@index([authorId])
   @@index([parentId])
   @@map("news_comments")
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueAt       DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  creatorId   String
+  assigneeId  String?
+  creator     User         @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([status, dueAt])
+  @@index([priority])
+  @@index([creatorId])
+  @@index([assigneeId])
+  @@map("tasks")
 }

@@ -6,6 +6,7 @@ import { DatabaseHealthService } from './database/database-health.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { NewsModule } from './modules/news/news.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { NewsModule } from './modules/news/news.module';
     DatabaseModule,
     AuthModule,
     NewsModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

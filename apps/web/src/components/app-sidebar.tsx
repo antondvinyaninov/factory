@@ -48,7 +48,7 @@ const data = {
     },
     {
       title: "Задачи",
-      url: "#",
+      url: "/tasks",
       icon: <IconFolder />,
     },
     {
