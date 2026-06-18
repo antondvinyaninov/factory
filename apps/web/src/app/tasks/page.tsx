@@ -44,6 +44,7 @@ import {
   TypographyMuted,
   TypographySmall,
 } from "@/components/ui/typography"
+import { getCurrentUserCached } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CANCELED"
@@ -267,8 +268,8 @@ export default function TasksPage() {
     setError("")
 
     try {
-      const [meResponse, tasksResponse, usersResponse] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/auth/me`, { credentials: "include" }),
+      const [nextCurrentUser, tasksResponse, usersResponse] = await Promise.all([
+        getCurrentUserCached(),
         fetch(`${getApiBaseUrl()}/tasks`, { credentials: "include" }),
         fetch(`${getApiBaseUrl()}/tasks/users`, { credentials: "include" }),
       ])
@@ -278,12 +279,7 @@ export default function TasksPage() {
         return
       }
 
-      let nextCurrentUser: CurrentUser | null = null
-      if (meResponse.ok) {
-        const payload = (await meResponse.json()) as { user?: CurrentUser }
-        nextCurrentUser = payload.user ?? null
-        setCurrentUser(nextCurrentUser)
-      }
+      setCurrentUser(nextCurrentUser)
 
       let nextUsers: TaskUser[] = []
       if (usersResponse.ok) {

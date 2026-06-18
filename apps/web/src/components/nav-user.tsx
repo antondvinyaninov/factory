@@ -28,6 +28,7 @@ import {
   EllipsisVerticalIcon,
   LogOutIcon,
 } from "lucide-react"
+import { clearCurrentUserCache } from "@/lib/auth-client"
 
 export function NavUser({
   user,
@@ -48,6 +49,7 @@ export function NavUser({
         credentials: "include",
       })
     } finally {
+      clearCurrentUserCache()
       router.push("/login")
       router.refresh()
     }

@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   IconFolder,
@@ -32,7 +33,7 @@ const items: MobileNavItem[] = [
   },
   {
     title: "Сообщения",
-    url: "#",
+    url: "/messages",
     icon: IconMessages,
   },
 ]
@@ -74,7 +75,7 @@ export function MobileBottomNav({
             (item.url === "/dashboard" && pathname === "/")
 
           return (
-            <a
+            <Link
               key={item.title}
               href={item.url}
               aria-current={isActive ? "page" : undefined}
@@ -85,7 +86,7 @@ export function MobileBottomNav({
             >
               <Icon className="size-6 shrink-0" />
               <span className="sr-only">{item.title}</span>
-            </a>
+            </Link>
           )
         })}
         <Button
@@ -102,7 +103,8 @@ export function MobileBottomNav({
           const isActive = messagesItem.url === pathname
 
           return (
-            <a
+            <Link
+              key={messagesItem.title}
               href={messagesItem.url}
               aria-current={isActive ? "page" : undefined}
               className={cn(
@@ -112,7 +114,7 @@ export function MobileBottomNav({
             >
               <Icon className="size-6 shrink-0" />
               <span className="sr-only">{messagesItem.title}</span>
-            </a>
+            </Link>
           )
         })()}
         <a

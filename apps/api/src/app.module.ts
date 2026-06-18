@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseHealthService } from './database/database-health.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { NewsModule } from './modules/news/news.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 
@@ -18,6 +19,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
     AuthModule,
     NewsModule,
     TasksModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

@@ -33,12 +33,14 @@ export class TasksService {
 
   async findAll(user: AuthUser) {
     return this.prisma.task.findMany({
+      relationLoadStrategy: 'join',
       where: isTaskAdmin(user)
         ? undefined
         : {
             OR: [{ creatorId: user.id }, { assigneeId: user.id }],
           },
       orderBy: [{ createdAt: 'desc' }],
+      take: 100,
       include: taskInclude,
     });
   }
@@ -47,6 +49,7 @@ export class TasksService {
     return this.prisma.user.findMany({
       where: { isActive: true },
       orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      take: 100,
       select: {
         id: true,
         name: true,

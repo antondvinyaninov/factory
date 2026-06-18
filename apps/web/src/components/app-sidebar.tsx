@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
@@ -28,6 +29,7 @@ import {
   IconSettings,
   IconUsers,
 } from "@tabler/icons-react"
+import { getCurrentUserCached } from "@/lib/auth-client"
 
 const data = {
   navMain: [
@@ -43,7 +45,7 @@ const data = {
     },
     {
       title: "Сообщения",
-      url: "#",
+      url: "/messages",
       icon: <IconMessages />,
     },
     {
@@ -113,31 +115,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     async function loadCurrentUser() {
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "/api"}/auth/me`,
-          {
-            credentials: "include",
-          },
-        )
+        const user = await getCurrentUserCached()
 
-        if (!response.ok) {
-          return
-        }
-
-        const payload = (await response.json()) as {
-          user?: {
-            name?: string
-            email?: string
-          }
-        }
-
-        if (!isMounted || !payload.user?.email) {
+        if (!isMounted || !user?.email) {
           return
         }
 
         setUser({
-          name: payload.user.name ?? payload.user.email,
-          email: payload.user.email,
+          name: user.name ?? user.email,
+          email: user.email,
           avatar: "",
         })
       } catch {
@@ -159,7 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               className="data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<a href="#" />}
+              render={<Link href="/news" />}
             >
               <img
                 src="/logo-portal.svg"

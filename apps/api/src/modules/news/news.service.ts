@@ -20,6 +20,7 @@ export class NewsService {
 
   async findPublished(viewer?: AuthUser) {
     const posts = await this.prisma.newsPost.findMany({
+      relationLoadStrategy: 'join',
       where: { isPublished: true },
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       include: {
@@ -31,6 +32,7 @@ export class NewsService {
           },
         },
         likes: {
+          where: viewer ? { userId: viewer.id } : { userId: '' },
           select: {
             userId: true,
           },
@@ -63,6 +65,7 @@ export class NewsService {
         _count: {
           select: {
             comments: true,
+            likes: true,
           },
         },
       },
@@ -70,10 +73,8 @@ export class NewsService {
 
     return posts.map(({ likes, _count, ...post }) => ({
       ...post,
-      likesCount: likes.length,
-      likedByMe: viewer
-        ? likes.some((like) => like.userId === viewer.id)
-        : false,
+      likesCount: _count.likes,
+      likedByMe: viewer ? likes.length > 0 : false,
       commentsCount: _count.comments,
     }));
   }

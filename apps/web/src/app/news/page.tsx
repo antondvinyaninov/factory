@@ -58,6 +58,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getCurrentUserCached } from "@/lib/auth-client"
 import {
   typographyStyles,
   TypographyMuted,
@@ -742,19 +743,7 @@ export default function NewsPage() {
 
   const loadCurrentUser = React.useCallback(async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "/api"}/auth/me`,
-        {
-          credentials: "include",
-        },
-      )
-
-      if (!response.ok) {
-        return
-      }
-
-      const payload = (await response.json()) as { user?: CurrentUser }
-      setCurrentUser(payload.user ?? null)
+      setCurrentUser(await getCurrentUserCached())
     } catch {
       setCurrentUser(null)
     }
@@ -789,6 +778,18 @@ export default function NewsPage() {
       setIsLoading(false)
     }
   }, [])
+
+  const updateNewsItems = React.useCallback(
+    (updater: (currentItems: NewsPost[]) => NewsPost[]) => {
+      setItems((currentItems) => {
+        const nextItems = normalizeNewsPosts(updater(currentItems))
+        cacheNews(nextItems)
+
+        return nextItems
+      })
+    },
+    [],
+  )
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -842,10 +843,21 @@ export default function NewsPage() {
         return
       }
 
+      const payload = (await response.json()) as { item: NewsPost }
+      const nextItem = normalizeNewsPosts([
+        {
+          ...payload.item,
+          comments: [],
+          commentsCount: 0,
+          likedByMe: false,
+          likesCount: 0,
+        },
+      ])[0]
+
       form.reset()
       clearSelectedFiles()
       setIsComposerOpen(false)
-      await loadNews()
+      updateNewsItems((currentItems) => [nextItem, ...currentItems])
     } catch {
       setError("Не удалось подключиться к API")
     } finally {
@@ -927,8 +939,23 @@ export default function NewsPage() {
         return
       }
 
+      const payload = (await response.json()) as { item: NewsPost }
+
       cancelEditing()
-      await loadNews()
+      updateNewsItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                ...payload.item,
+                comments: item.comments,
+                commentsCount: item.commentsCount,
+                likedByMe: item.likedByMe,
+                likesCount: item.likesCount,
+              }
+            : item,
+        ),
+      )
     } catch {
       setError("Не удалось подключиться к API")
     } finally {
@@ -962,7 +989,9 @@ export default function NewsPage() {
         cancelEditing()
       }
 
-      await loadNews()
+      updateNewsItems((currentItems) =>
+        currentItems.filter((item) => item.id !== itemId),
+      )
     } catch {
       setError("Не удалось подключиться к API")
     } finally {
@@ -979,7 +1008,7 @@ export default function NewsPage() {
     setError("")
     const previousItems = items
 
-    setItems((currentItems) =>
+    updateNewsItems((currentItems) =>
       currentItems.map((item) => {
         if (item.id !== itemId) {
           return item
@@ -1009,6 +1038,7 @@ export default function NewsPage() {
 
       if (!response.ok) {
         setItems(previousItems)
+        cacheNews(previousItems)
         setError("Не удалось обновить лайк")
         return
       }
@@ -1018,7 +1048,7 @@ export default function NewsPage() {
         likesCount: number
       }
 
-      setItems((currentItems) =>
+      updateNewsItems((currentItems) =>
         currentItems.map((item) =>
           item.id === itemId
             ? {
@@ -1031,6 +1061,7 @@ export default function NewsPage() {
       )
     } catch {
       setItems(previousItems)
+      cacheNews(previousItems)
       setError("Не удалось подключиться к API")
     } finally {
       pendingLikeIdsRef.current.delete(itemId)
@@ -1073,7 +1104,7 @@ export default function NewsPage() {
     form.reset()
     setReplyingToCommentId(null)
 
-    setItems((currentItems) =>
+    updateNewsItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
           ? addCommentToPost(item, optimisticComment, targetParentCommentId)
@@ -1098,7 +1129,7 @@ export default function NewsPage() {
       )
 
       if (!response.ok) {
-        setItems((currentItems) =>
+        updateNewsItems((currentItems) =>
           currentItems.map((item) =>
             item.id === itemId
               ? removeCommentFromPost(item, optimisticComment.id)
@@ -1111,7 +1142,7 @@ export default function NewsPage() {
 
       const payload = (await response.json()) as { comment: NewsComment }
 
-      setItems((currentItems) =>
+      updateNewsItems((currentItems) =>
         currentItems.map((item) =>
           item.id === itemId
             ? replaceCommentInPost(item, optimisticComment.id, payload.comment)
@@ -1119,7 +1150,7 @@ export default function NewsPage() {
         ),
       )
     } catch {
-      setItems((currentItems) =>
+      updateNewsItems((currentItems) =>
         currentItems.map((item) =>
           item.id === itemId
             ? removeCommentFromPost(item, optimisticComment.id)
