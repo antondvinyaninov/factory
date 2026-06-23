@@ -50,13 +50,8 @@ const data = {
       icon: <IconDatabase />,
     },
     {
-      name: "Отчёты",
-      url: "#",
-      icon: <IconReport />,
-    },
-    {
       name: "Документооборот",
-      url: "#",
+      url: "/documents",
       icon: <IconFileWord />,
     },
   ],

@@ -12,6 +12,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AiModule } from './modules/ai/ai.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AiModule } from './modules/ai/ai.module';
     UsersModule,
     NotificationsModule,
     AiModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

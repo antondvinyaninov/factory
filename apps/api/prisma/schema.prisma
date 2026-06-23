@@ -36,6 +36,24 @@ enum TaskPriority {
   URGENT
 }
 
+enum DocumentStatus {
+  DRAFT
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+}
+
+enum RouteType {
+  SEQUENTIAL
+  PARALLEL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id                       String                    @id @default(cuid())
   email                    String                    @unique
@@ -71,6 +89,9 @@ model User {
   conversationParticipants ConversationParticipant[]
   chatMessages             ChatMessage[]
   notifications            Notification[]
+
+  createdDocuments         Document[]          @relation("DocumentCreator")
+  approvals                ApprovalRouteItem[] @relation("DocumentApprover")
 
   @@index([isActive, name, email])
   @@index([personnelNumber])
@@ -216,5 +237,42 @@ model Notification {
   @@index([userId, read])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+model Document {
+  id          String         @id @default(cuid())
+  title       String
+  content     String         @db.Text
+  status      DocumentStatus @default(DRAFT)
+  routeType   RouteType      @default(SEQUENTIAL)
+  authorId    String
+  author      User           @relation("DocumentCreator", fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  approvalRoute ApprovalRouteItem[]
+
+  @@index([authorId])
+  @@index([status])
+  @@map("documents")
+}
+
+model ApprovalRouteItem {
+  id          String         @id @default(cuid())
+  documentId  String
+  document    Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User           @relation("DocumentApprover", fields: [userId], references: [id], onDelete: Cascade)
+  order       Int            @default(0)
+  status      ApprovalStatus @default(PENDING)
+  comment     String?        @db.Text
+  decidedAt   DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([status])
+  @@map("approval_route_items")
 }
 
