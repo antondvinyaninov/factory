@@ -23,10 +23,13 @@ import {
   IconListDetails,
   IconMessages,
   IconReport,
+  IconClock,
   IconSettings,
   IconUser,
   IconUsers,
   IconBrain,
+  IconSparkles,
+  IconLifebuoy,
 } from "@tabler/icons-react"
 import { getCurrentUserCached } from "@/lib/auth-client"
 
@@ -48,6 +51,11 @@ const data = {
       name: "База знаний",
       url: "#",
       icon: <IconDatabase />,
+    },
+    {
+      name: "Служба поддержки",
+      url: "/helpdesk",
+      icon: <IconLifebuoy />,
     },
     {
       name: "Документооборот",
@@ -133,6 +141,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Сотрудники",
       url: "/employees",
       icon: <IconUsers />,
+    },
+    {
+      title: "Учет времени",
+      url: "/time-tracking",
+      icon: <IconClock />,
     },
     {
       title: "AI Ассистент",

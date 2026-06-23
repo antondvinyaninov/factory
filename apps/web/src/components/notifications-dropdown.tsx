@@ -9,6 +9,7 @@ import {
   ClipboardListIcon,
   HeartIcon,
   SparklesIcon,
+  LifeBuoyIcon,
 } from "lucide-react"
 import {
   Sheet,
@@ -41,6 +42,9 @@ function getNotificationIcon(type: string) {
       return <MessageSquareIcon className="size-4 text-emerald-500 shrink-0" />
     case "NEWS_LIKE":
       return <HeartIcon className="size-4 text-rose-500 shrink-0" />
+    case "ticket_update":
+    case "ticket_comment":
+      return <LifeBuoyIcon className="size-4 text-primary shrink-0" />
     default:
       return <SparklesIcon className="size-4 text-amber-500 shrink-0" />
   }

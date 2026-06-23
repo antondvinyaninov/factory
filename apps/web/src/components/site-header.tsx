@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { WorkShiftToggle } from "@/components/work-shift-toggle"
 import { TypographyH1 } from "@/components/ui/typography"
 import { Button } from "@/components/ui/button"
 import {
@@ -324,6 +325,7 @@ export function SiteHeader({
             </button>
           </div>
 
+          <WorkShiftToggle />
           <NotificationsDropdown />
           <ThemeToggle />
           

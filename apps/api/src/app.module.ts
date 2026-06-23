@@ -13,6 +13,8 @@ import { UsersModule } from './modules/users/users.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AiModule } from './modules/ai/ai.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
+import { WorkShiftsModule } from './modules/work-shifts/work-shifts.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { DocumentsModule } from './modules/documents/documents.module';
     NotificationsModule,
     AiModule,
     DocumentsModule,
+    TicketsModule,
+    WorkShiftsModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

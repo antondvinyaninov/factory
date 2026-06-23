@@ -54,6 +54,13 @@ enum ApprovalStatus {
   REJECTED
 }
 
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 model User {
   id                       String                    @id @default(cuid())
   email                    String                    @unique
@@ -92,6 +99,12 @@ model User {
 
   createdDocuments         Document[]          @relation("DocumentCreator")
   approvals                ApprovalRouteItem[] @relation("DocumentApprover")
+
+  createdTickets           Ticket[]            @relation("TicketAuthor")
+  assignedTickets          Ticket[]            @relation("TicketAssignee")
+  ticketComments           TicketComment[]
+
+  workShifts               WorkShift[]
 
   @@index([isActive, name, email])
   @@index([personnelNumber])
@@ -276,3 +289,75 @@ model ApprovalRouteItem {
   @@map("approval_route_items")
 }
 
+model TicketCategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  tickets     Ticket[]
+
+  @@map("ticket_categories")
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  status      TicketStatus @default(OPEN)
+  
+  categoryId  String
+  category    TicketCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  authorId    String
+  author      User         @relation("TicketAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  assigneeId  String?
+  assignee    User?        @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  comments    TicketComment[]
+
+  @@index([authorId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([categoryId])
+  @@map("tickets")
+}
+
+model TicketComment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@map("ticket_comments")
+}
+
+enum WorkShiftStatus {
+  ACTIVE
+  CLOSED
+}
+
+model WorkShift {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startTime  DateTime        @default(now())
+  endTime    DateTime?
+  durationMs Int?
+  status     WorkShiftStatus @default(ACTIVE)
+
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("work_shifts")
+}
