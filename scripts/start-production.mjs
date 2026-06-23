@@ -93,7 +93,16 @@ if (!webServerPath) {
   throw new Error("Next.js standalone server was not found. Run web build first.")
 }
 
-start("API", "node", ["apps/api/dist/main.js"], {
+const apiServerPath = [
+  "apps/api/dist/src/main.js",
+  "apps/api/dist/main.js",
+].find((path) => existsSync(path))
+
+if (!apiServerPath) {
+  throw new Error("NestJS server was not found. Run api build first.")
+}
+
+start("API", "node", [apiServerPath], {
   PORT: process.env.API_PORT ?? "3001",
 })
 
