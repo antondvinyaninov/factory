@@ -41,6 +41,7 @@ export class UsersService {
         location: dto.location,
         bio: dto.bio,
         skills: dto.skills ? dto.skills : undefined,
+        isOnboarded: dto.isOnboarded,
       },
     });
     

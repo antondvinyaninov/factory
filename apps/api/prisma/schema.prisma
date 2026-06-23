@@ -85,6 +85,7 @@ model User {
   skills                   Json                      @default("[]")
   role                     UserRole                  @default(USER)
   isActive                 Boolean                   @default(true)
+  isOnboarded              Boolean                   @default(false)
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   newsPosts                NewsPost[]

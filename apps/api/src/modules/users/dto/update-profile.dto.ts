@@ -6,4 +6,5 @@ export class UpdateProfileDto {
   location?: string;
   bio?: string;
   skills?: any; // json
+  isOnboarded?: boolean;
 }

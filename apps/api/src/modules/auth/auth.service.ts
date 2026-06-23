@@ -40,6 +40,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      isOnboarded: user.isOnboarded,
     };
 
     const payload: JwtPayload = {
@@ -72,6 +73,7 @@ export class AuthService {
           name: true,
           role: true,
           isActive: true,
+          isOnboarded: true,
         },
       });
 
@@ -84,6 +86,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        isOnboarded: user.isOnboarded,
       };
 
       this.userCache.set(user.id, {

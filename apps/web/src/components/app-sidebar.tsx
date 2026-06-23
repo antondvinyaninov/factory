@@ -6,6 +6,7 @@ import Link from "next/link"
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
+import { OnboardingModal } from "@/components/onboarding-modal"
 import {
   Sidebar,
   SidebarContent,
@@ -177,6 +178,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={navMainItems} />
         <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <SidebarMenu className="px-2 pb-4">
+          <SidebarMenuItem>
+            <OnboardingModal trigger={
+              <SidebarMenuButton>
+                <IconSparkles className="size-4" />
+                <span>Инструктаж</span>
+              </SidebarMenuButton>
+            } />
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarContent>
     </Sidebar>
   )
