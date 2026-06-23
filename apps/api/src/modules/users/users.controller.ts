@@ -33,6 +33,16 @@ export class UsersController {
     return this.usersService.updateProfile(currentUser.id, dto);
   }
 
+  @Get()
+  async findAll(@Req() request: Request) {
+    const token = getSessionToken(request);
+    if (!token) throw new UnauthorizedException('Unauthorized');
+    const currentUser = await this.authService.getUserFromToken(token);
+    if (!currentUser) throw new UnauthorizedException('Unauthorized');
+
+    return this.usersService.findAll();
+  }
+
   @Get(':id')
   async getUser(@Param('id') id: string) {
     return this.usersService.findOne(id);

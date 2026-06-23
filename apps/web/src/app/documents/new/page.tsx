@@ -30,12 +30,10 @@ export default function NewDocumentPage() {
   const [loading, setLoading] = React.useState(false)
 
   React.useEffect(() => {
-    fetch("/api/employees", { credentials: "include" })
+    fetch("/api/users", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
-        if (data && Array.isArray(data.items)) {
-          setEmployees(data.items)
-        } else if (Array.isArray(data)) {
+        if (data && Array.isArray(data)) {
           setEmployees(data)
         }
       })
