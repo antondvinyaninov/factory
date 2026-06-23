@@ -346,13 +346,17 @@ export default function AiAssistantPage() {
       }
 
       const data = await response.json()
+
+      if (data.setupRequired) {
+        throw new Error("Не настроен API ключ для нейросетей на сервере (отсутствует OPENAI_API_KEY в .env).")
+      }
       
       setMessages(prev => [
         ...prev,
         {
           id: `msg-assistant-${prev.length}`,
           role: "assistant",
-          content: data.content,
+          content: data.content || "Ассистент вернул пустой ответ.",
           createdAt: new Date(),
           model: selectedModel.id,
         }
