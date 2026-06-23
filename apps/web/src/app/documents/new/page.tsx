@@ -33,7 +33,9 @@ export default function NewDocumentPage() {
     fetch("/api/employees", { credentials: "include" })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
+        if (data && Array.isArray(data.items)) {
+          setEmployees(data.items)
+        } else if (Array.isArray(data)) {
           setEmployees(data)
         }
       })
