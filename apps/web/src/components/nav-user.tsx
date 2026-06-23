@@ -34,6 +34,7 @@ export function NavUser({
   user,
 }: {
   user: {
+    id: string
     name: string
     email: string
     avatar: string
@@ -100,7 +101,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => user.id && router.push(`/profile/${user.id}`)}>
                 <CircleUserRoundIcon
                 />
                 Профиль

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthUser } from '../auth/auth.types';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateNewsCommentDto } from './dto/create-news-comment.dto';
 import { CreateNewsPostDto } from './dto/create-news-post.dto';
 import { UpdateNewsPostDto } from './dto/update-news-post.dto';
@@ -16,7 +17,10 @@ import {
 
 @Injectable()
 export class NewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findPublished(viewer?: AuthUser) {
     const posts = await this.prisma.newsPost.findMany({
@@ -148,7 +152,7 @@ export class NewsService {
   }
 
   async toggleLike(id: string, user: AuthUser) {
-    await this.ensurePublishedPost(id);
+    const post = await this.ensurePublishedPost(id);
 
     const existingLike = await this.prisma.newsLike.findUnique({
       where: {
@@ -170,6 +174,17 @@ export class NewsService {
           userId: user.id,
         },
       });
+
+      // Send notification to author if not liking own post
+      if (post.authorId !== user.id) {
+        await this.notificationsService.create(
+          post.authorId,
+          'Новая отметка "Нравится"',
+          `Пользователю ${user.name || user.email} понравилась ваша новость: "${post.title}"`,
+          'NEWS_LIKE',
+          '/news',
+        );
+      }
     }
 
     const likesCount = await this.prisma.newsLike.count({
@@ -183,7 +198,7 @@ export class NewsService {
   }
 
   async addComment(id: string, dto: CreateNewsCommentDto, author: AuthUser) {
-    await this.ensurePublishedPost(id);
+    const post = await this.ensurePublishedPost(id);
 
     const content = dto.content.trim();
 
@@ -192,9 +207,10 @@ export class NewsService {
     }
 
     const parentId = dto.parentId?.trim();
+    let parentComment: { id: string; authorId: string } | null = null;
 
     if (parentId) {
-      const parentComment = await this.prisma.newsComment.findFirst({
+      parentComment = await this.prisma.newsComment.findFirst({
         where: {
           id: parentId,
           postId: id,
@@ -202,6 +218,7 @@ export class NewsService {
         },
         select: {
           id: true,
+          authorId: true,
         },
       });
 
@@ -210,37 +227,64 @@ export class NewsService {
       }
     }
 
-    return {
-      comment: await this.prisma.newsComment.create({
-        data: {
-          postId: id,
-          authorId: author.id,
-          content,
-          parentId: parentId || null,
-        },
-        include: {
-          author: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+    const comment = await this.prisma.newsComment.create({
+      data: {
+        postId: id,
+        authorId: author.id,
+        content,
+        parentId: parentId || null,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
-          replies: {
-            orderBy: { createdAt: 'asc' },
-            include: {
-              author: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
+        },
+        replies: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            author: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
               },
             },
           },
         },
-      }),
-    };
+      },
+    });
+
+    // 1. Notify parent comment author if replying to someone's comment (and it's not self-reply)
+    if (parentComment && parentComment.authorId !== author.id) {
+      await this.notificationsService.create(
+        parentComment.authorId,
+        'Ответ на ваш комментарий',
+        `Пользователь ${author.name || author.email} ответил на ваш комментарий к новости: "${post.title}"`,
+        'NEWS_COMMENT',
+        '/news',
+      );
+    }
+
+    // 2. Notify post author if someone commented (and it's not the post author themself)
+    const notifiedUserIds = new Set<string>();
+    if (parentComment && parentComment.authorId !== author.id) {
+      notifiedUserIds.add(parentComment.authorId);
+    }
+
+    if (post.authorId !== author.id && !notifiedUserIds.has(post.authorId)) {
+      await this.notificationsService.create(
+        post.authorId,
+        'Новый комментарий',
+        `Пользователь ${author.name || author.email} прокомментировал вашу новость: "${post.title}"`,
+        'NEWS_COMMENT',
+        '/news',
+      );
+    }
+
+    return { comment };
   }
 
   private preparePayload(dto: CreateNewsPostDto | UpdateNewsPostDto) {
@@ -287,6 +331,8 @@ export class NewsService {
       },
       select: {
         id: true,
+        title: true,
+        authorId: true,
       },
     });
 

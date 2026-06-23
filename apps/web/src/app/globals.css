@@ -130,3 +130,25 @@
     font-family: var(--font-inter), Arial, Helvetica, sans-serif;
   }
 }
+
+/* cmdk custom styles */
+[cmdk-group-heading] {
+  padding: 0.5rem 0.5rem 0.25rem 0.5rem !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--color-muted-foreground) !important;
+}
+
+[cmdk-group-items] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[cmdk-item] {
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+}

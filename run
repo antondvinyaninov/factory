@@ -1,0 +1,32 @@
+#!/bin/bash
+# Скрипт запуска для macOS / Linux
+
+echo "Установка зависимостей..."
+pnpm install
+
+echo "Запуск Backend (API) и Frontend (Web)..."
+
+# Запускаем API в фоне
+pnpm dev:api &
+API_PID=$!
+
+# Запускаем Web в фоне
+pnpm dev:web &
+WEB_PID=$!
+
+echo "Сервисы запущены! Нажмите Ctrl+C для остановки."
+
+# Функция для закрытия процессов при остановке скрипта (Ctrl+C)
+cleanup() {
+    echo ""
+    echo "Остановка сервисов..."
+    kill $API_PID
+    kill $WEB_PID
+    exit 0
+}
+
+# Перехватываем сигналы остановки (Ctrl+C)
+trap cleanup SIGINT SIGTERM
+
+# Ожидаем завершения процессов
+wait $API_PID $WEB_PID

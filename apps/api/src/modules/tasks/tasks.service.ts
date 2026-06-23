@@ -7,6 +7,7 @@ import {
 import { TaskPriority, TaskStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthUser } from '../auth/auth.types';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -29,7 +30,10 @@ const taskInclude = {
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(user: AuthUser) {
     return this.prisma.task.findMany({
@@ -61,25 +65,84 @@ export class TasksService {
   async create(dto: CreateTaskDto, creator: AuthUser) {
     const payload = await this.prepareCreatePayload(dto, creator);
 
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: payload,
       include: taskInclude,
     });
+
+    if (task.assigneeId && task.assigneeId !== creator.id) {
+      await this.notificationsService.create(
+        task.assigneeId,
+        'Новая задача',
+        `Вам назначена задача: "${task.title}"`,
+        'TASK_ASSIGNED',
+        '/tasks',
+      );
+    }
+
+    return task;
   }
 
   async update(id: string, dto: UpdateTaskDto, user: AuthUser) {
-    await this.getTaskForAccess(id, user);
+    const existingTask = await this.getTaskForAccess(id, user);
     const data = await this.prepareUpdatePayload(dto);
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('No task fields to update');
     }
 
-    return this.prisma.task.update({
+    const updatedTask = await this.prisma.task.update({
       where: { id },
       data,
       include: taskInclude,
     });
+
+    const statusLabels: Record<TaskStatus, string> = {
+      TODO: 'К выполнению',
+      IN_PROGRESS: 'В работе',
+      DONE: 'Готово',
+      CANCELED: 'Отменено',
+    };
+
+    // 1. Notify new assignee if assignee changed
+    if (data.assigneeId && data.assigneeId !== existingTask.assigneeId && data.assigneeId !== user.id) {
+      await this.notificationsService.create(
+        data.assigneeId,
+        'Вам назначена задача',
+        `Вам назначена задача: "${updatedTask.title}"`,
+        'TASK_ASSIGNED',
+        '/tasks',
+      );
+    }
+
+    // 2. Notify about status changes
+    if (data.status && data.status !== existingTask.status) {
+      const statusText = statusLabels[data.status] || data.status;
+
+      // If the updater is the assignee, notify the creator
+      if (user.id === existingTask.assigneeId && existingTask.creatorId !== user.id) {
+        await this.notificationsService.create(
+          existingTask.creatorId,
+          'Статус задачи обновлен',
+          `Статус задачи "${updatedTask.title}" изменен на "${statusText}"`,
+          'TASK_STATUS_CHANGED',
+          '/tasks',
+        );
+      }
+
+      // If the updater is the creator (or admin), notify the assignee
+      if (user.id === existingTask.creatorId && existingTask.assigneeId && existingTask.assigneeId !== user.id) {
+        await this.notificationsService.create(
+          existingTask.assigneeId,
+          'Статус задачи обновлен',
+          `Статус задачи "${updatedTask.title}" изменен на "${statusText}"`,
+          'TASK_STATUS_CHANGED',
+          '/tasks',
+        );
+      }
+    }
+
+    return updatedTask;
   }
 
   async remove(id: string, user: AuthUser) {
@@ -185,6 +248,8 @@ export class TasksService {
       where: { id },
       select: {
         id: true,
+        title: true,
+        status: true,
         creatorId: true,
         assigneeId: true,
       },

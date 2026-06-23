@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import {
   MessageCircleIcon,
   PlusIcon,
@@ -68,6 +69,7 @@ type ConversationItem = {
   updatedAt: string
   participants: ConversationParticipant[]
   lastMessage: ChatMessage | null
+  unreadCount?: number
 }
 
 const timeFormatter = new Intl.DateTimeFormat("ru-RU", {
@@ -141,7 +143,10 @@ function mergeMessages(
   )
 }
 
-export default function MessagesPage() {
+function MessagesPageContent() {
+  const searchParams = useSearchParams()
+  const urlId = searchParams.get("id") ?? searchParams.get("conversationId")
+
   const [conversations, setConversations] = React.useState<ConversationItem[]>(
     [],
   )
@@ -187,7 +192,10 @@ export default function MessagesPage() {
     setActiveConversationId(conversationId)
     setMessages(cachedMessages ?? [])
     setIsMessagesLoading(!cachedMessages)
-  }, [])
+    setConversations((current) =>
+      current.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+    )
+  }, [setConversations])
 
   const loadConversations = React.useCallback(async () => {
     const response = await fetch(`${getApiBaseUrl()}/messages/conversations`, {
@@ -203,9 +211,10 @@ export default function MessagesPage() {
     setConversations(nextConversations)
 
     setActiveConversationId((currentId) => {
+      const targetId = urlId || currentId
       const nextId =
-        currentId && nextConversations.some((item) => item.id === currentId)
-          ? currentId
+        targetId && nextConversations.some((item) => item.id === targetId)
+          ? targetId
           : (nextConversations[0]?.id ?? null)
 
       activeConversationIdRef.current = nextId
@@ -213,7 +222,16 @@ export default function MessagesPage() {
     })
 
     return nextConversations
-  }, [])
+  }, [urlId])
+
+  React.useEffect(() => {
+    if (urlId && conversations.some((c) => c.id === urlId) && activeConversationId !== urlId) {
+      const timeoutId = window.setTimeout(() => {
+        selectConversation(urlId)
+      }, 0)
+      return () => window.clearTimeout(timeoutId)
+    }
+  }, [urlId, conversations, activeConversationId, selectConversation])
 
   const loadMessages = React.useCallback(
     async (
@@ -256,10 +274,14 @@ export default function MessagesPage() {
           ? mergeMessages(cachedMessages, fetchedMessages)
           : fetchedMessages
       saveMessages(conversationId, nextMessages)
+      setConversations((current) =>
+        current.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+      )
+      window.dispatchEvent(new CustomEvent("messages-read"))
 
       return nextMessages
     },
-    [saveMessages],
+    [saveMessages, setConversations],
   )
 
   const loadInitialData = React.useCallback(async () => {
@@ -616,8 +638,13 @@ export default function MessagesPage() {
                           </AvatarFallback>
                         </Avatar>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">
-                            {title}
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="block truncate text-sm font-medium">
+                              {title}
+                            </span>
+                            {conversation.unreadCount && conversation.unreadCount > 0 && !isActive ? (
+                              <span className="flex size-2 shrink-0 items-center justify-center rounded-full bg-red-500" />
+                            ) : null}
                           </span>
                           <span
                             className={cn(
@@ -767,5 +794,13 @@ export default function MessagesPage() {
         />
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+export default function MessagesPage() {
+  return (
+    <React.Suspense fallback={<div>Загрузка сообщений...</div>}>
+      <MessagesPageContent />
+    </React.Suspense>
   )
 }

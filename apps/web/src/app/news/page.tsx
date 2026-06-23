@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import Image from "next/image"
+import Link from "next/link"
 import { AppSidebar } from "@/components/app-sidebar"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { SiteHeader } from "@/components/site-header"
@@ -66,61 +68,8 @@ import {
   TypographySmall,
 } from "@/components/ui/typography"
 
-type NewsAttachment = {
-  id: string
-  name: string
-  mimeType: string
-  size: number
-  url: string
-  kind: "image" | "video" | "document"
-}
-
-type NewsComment = {
-  id: string
-  content: string
-  parentId?: string | null
-  createdAt: string
-  author: {
-    id: string
-    name: string
-    email: string
-    avatar?: string
-  }
-  replies?: NewsComment[]
-}
-
-type NewsPost = {
-  id: string
-  title: string
-  content: string
-  isImportant?: boolean
-  likesCount?: number
-  likedByMe?: boolean
-  commentsCount?: number
-  comments?: NewsComment[]
-  attachments?: NewsAttachment[]
-  publishedAt: string | null
-  createdAt: string
-  author: {
-    id: string
-    name: string
-    email: string
-    avatar?: string
-  }
-}
-
-type CurrentUser = {
-  id: string
-  name: string
-  email: string
-}
-
-type SelectedNewsFile = {
-  id: string
-  file: File
-  kind: NewsAttachment["kind"]
-  previewUrl: string | null
-}
+import type { NewsAttachment, NewsComment, NewsPost, SelectedNewsFile, CurrentUser } from "@/types/news"
+import { NewsPostCard } from "@/components/news-post-card"
 
 type NewsFeedFilter = "all" | "attachments" | "images" | "documents" | "mine"
 
@@ -230,70 +179,6 @@ function sortNewsPosts(items: NewsPost[]) {
   })
 }
 
-function addCommentToPost(
-  item: NewsPost,
-  comment: NewsComment,
-  parentCommentId?: string,
-) {
-  if (!parentCommentId) {
-    return {
-      ...item,
-      comments: [...(item.comments ?? []), comment],
-      commentsCount: (item.commentsCount ?? 0) + 1,
-    }
-  }
-
-  return {
-    ...item,
-    comments: (item.comments ?? []).map((rootComment) =>
-      rootComment.id === parentCommentId
-        ? {
-            ...rootComment,
-            replies: [...(rootComment.replies ?? []), comment],
-          }
-        : rootComment,
-    ),
-    commentsCount: (item.commentsCount ?? 0) + 1,
-  }
-}
-
-function replaceCommentInPost(
-  item: NewsPost,
-  commentId: string,
-  nextComment: NewsComment,
-) {
-  return {
-    ...item,
-    comments: (item.comments ?? []).map((rootComment) => {
-      if (rootComment.id === commentId) {
-        return nextComment
-      }
-
-      return {
-        ...rootComment,
-        replies: (rootComment.replies ?? []).map((reply) =>
-          reply.id === commentId ? nextComment : reply,
-        ),
-      }
-    }),
-  }
-}
-
-function removeCommentFromPost(item: NewsPost, commentId: string) {
-  return {
-    ...item,
-    comments: (item.comments ?? [])
-      .filter((rootComment) => rootComment.id !== commentId)
-      .map((rootComment) => ({
-        ...rootComment,
-        replies: (rootComment.replies ?? []).filter(
-          (reply) => reply.id !== commentId,
-        ),
-      })),
-    commentsCount: Math.max(0, (item.commentsCount ?? 1) - 1),
-  }
-}
-
 function normalizePostComments(comments: NewsComment[] = []) {
   const commentById = new Map<string, NewsComment>()
 
@@ -361,174 +246,6 @@ function cacheNews(items: NewsPost[]) {
   } catch {
     // Ignore cache write errors.
   }
-}
-
-function AttachmentPreviewSheet({
-  attachment,
-  onClose,
-}: {
-  attachment: NewsAttachment | null
-  onClose: () => void
-}) {
-  return (
-    <Sheet open={Boolean(attachment)} onOpenChange={(open) => !open && onClose()}>
-      {attachment ? (
-        <SheetContent
-          side="right"
-          className="!w-[min(1120px,calc(100vw-1rem))] !max-w-none gap-0 overflow-hidden p-0"
-        >
-          <SheetHeader className="border-b pr-12">
-            <SheetTitle className="truncate">{attachment.name}</SheetTitle>
-            <SheetDescription>
-              {formatFileSize(attachment.size)}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted/30 p-4">
-            {attachment.kind === "image" ? (
-              <Image
-                src={attachment.url}
-                alt={attachment.name}
-                width={1600}
-                height={1000}
-                unoptimized
-                className="max-h-[calc(100vh-11rem)] w-auto max-w-full rounded-lg object-contain shadow-sm"
-              />
-            ) : null}
-            {attachment.kind === "video" ? (
-              <video
-                src={attachment.url}
-                controls
-                className="max-h-[calc(100vh-11rem)] w-full rounded-lg bg-black shadow-sm"
-              />
-            ) : null}
-            {attachment.kind === "document" && canPreviewDocument(attachment) ? (
-              <iframe
-                src={attachment.url}
-                title={attachment.name}
-                className="h-[calc(100vh-11rem)] w-full rounded-lg border bg-background shadow-sm"
-              />
-            ) : null}
-            {attachment.kind === "document" && !canPreviewDocument(attachment) ? (
-              <div className="flex max-w-md flex-col items-center gap-4 rounded-xl border bg-background p-8 text-center shadow-sm">
-                <span className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <FileTextIcon className="size-8" />
-                </span>
-                <div className="grid gap-1">
-                  <TypographySmall>Предпросмотр недоступен</TypographySmall>
-                  <TypographyMuted>
-                    Этот формат документа лучше скачать или открыть отдельно.
-                  </TypographyMuted>
-                </div>
-              </div>
-            ) : null}
-          </div>
-          <SheetFooter className="border-t sm:flex-row sm:justify-end">
-            <a
-              href={attachment.url}
-              download={attachment.name}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              <DownloadIcon />
-              Скачать
-            </a>
-            <a
-              href={attachment.url}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              <ExternalLinkIcon />
-              Открыть отдельно
-            </a>
-          </SheetFooter>
-        </SheetContent>
-      ) : null}
-    </Sheet>
-  )
-}
-
-function NewsAttachments({
-  attachments,
-  onOpenAttachment,
-}: {
-  attachments: NewsAttachment[]
-  onOpenAttachment: (attachment: NewsAttachment) => void
-}) {
-  const images = attachments.filter((attachment) => attachment.kind === "image")
-  const videos = attachments.filter((attachment) => attachment.kind === "video")
-  const documents = attachments.filter(
-    (attachment) => attachment.kind === "document",
-  )
-
-  return (
-    <div className="flex flex-col gap-4">
-      {images.length > 0 ? (
-        <div className="grid gap-3">
-          {images.map((attachment) => (
-            <button
-              key={attachment.id}
-              type="button"
-              className="mx-auto w-full max-w-[640px] overflow-hidden rounded-lg border bg-muted/30 text-left"
-              onClick={() => onOpenAttachment(attachment)}
-            >
-              <Image
-                src={attachment.url}
-                alt={attachment.name}
-                width={800}
-                height={450}
-                unoptimized
-                className="aspect-video h-auto w-full object-contain transition-transform hover:scale-[1.02]"
-              />
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {videos.length > 0 ? (
-        <div className="grid gap-3">
-          {videos.map((attachment) => (
-            <button
-              key={attachment.id}
-              type="button"
-              className="mx-auto w-full max-w-[640px] overflow-hidden rounded-lg border bg-black text-left"
-              onClick={() => onOpenAttachment(attachment)}
-            >
-              <video
-                src={attachment.url}
-                className="aspect-video h-auto w-full object-contain"
-                muted
-              />
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {documents.length > 0 ? (
-        <div className="grid gap-2">
-          {documents.map((attachment) => (
-            <button
-              key={attachment.id}
-              type="button"
-              className="flex items-center gap-3 rounded-lg border p-3 text-left text-sm transition-colors hover:bg-muted/50"
-              onClick={() => onOpenAttachment(attachment)}
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <FileTextIcon className="size-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {attachment.name}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {formatFileSize(attachment.size)}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
 }
 
 function NewsFeedSidebar({
@@ -644,13 +361,13 @@ function NewsFeedSidebar({
   )
 }
 
-export default function NewsPage() {
+function NewsPageContent() {
+  const searchParams = useSearchParams()
+  const urlId = searchParams.get("id") ?? searchParams.get("postId")
+
   const [items, setItems] = React.useState<NewsPost[]>([])
   const [currentUser, setCurrentUser] = React.useState<CurrentUser | null>(null)
-  const [editingId, setEditingId] = React.useState<string | null>(null)
-  const [editingTitle, setEditingTitle] = React.useState("")
-  const [editingContent, setEditingContent] = React.useState("")
-  const [selectedFiles, setSelectedFiles] = React.useState<SelectedNewsFile[]>(
+        const [selectedFiles, setSelectedFiles] = React.useState<SelectedNewsFile[]>(
     [],
   )
   const [previewAttachment, setPreviewAttachment] =
@@ -661,10 +378,7 @@ export default function NewsPage() {
   const [isFiltersOpen, setIsFiltersOpen] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isPublishing, setIsPublishing] = React.useState(false)
-  const [savingId, setSavingId] = React.useState<string | null>(null)
-  const [deletingId, setDeletingId] = React.useState<string | null>(null)
-  const [commentingId, setCommentingId] = React.useState<string | null>(null)
-  const [replyingToCommentId, setReplyingToCommentId] = React.useState<
+        const [replyingToCommentId, setReplyingToCommentId] = React.useState<
     string | null
   >(null)
   const [expandedCommentPostIds, setExpandedCommentPostIds] = React.useState<
@@ -809,6 +523,23 @@ export default function NewsPage() {
   }, [loadCurrentUser, loadNews])
 
   React.useEffect(() => {
+    if (urlId) {
+      const timeoutId = window.setTimeout(() => {
+        const element = document.getElementById(`post-${urlId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" })
+          element.classList.add("ring-2", "ring-primary", "ring-offset-2")
+          const timerId = window.setTimeout(() => {
+            element.classList.remove("ring-2", "ring-primary", "ring-offset-2")
+          }, 3000)
+          return () => window.clearTimeout(timerId)
+        }
+      }, 100)
+      return () => window.clearTimeout(timeoutId)
+    }
+  }, [urlId, items])
+
+  React.useEffect(() => {
     selectedFilesRef.current = selectedFiles
   }, [selectedFiles])
 
@@ -865,19 +596,6 @@ export default function NewsPage() {
     }
   }
 
-  function startEditing(item: NewsPost) {
-    setError("")
-    setEditingId(item.id)
-    setEditingTitle(item.title)
-    setEditingContent(item.content)
-  }
-
-  function cancelEditing() {
-    setEditingId(null)
-    setEditingTitle("")
-    setEditingContent("")
-  }
-
   function handleAttachmentsChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = createSelectedNewsFiles(Array.from(event.target.files ?? []))
 
@@ -914,255 +632,6 @@ export default function NewsPage() {
     })
   }
 
-  async function handleUpdate(itemId: string) {
-    setError("")
-    setSavingId(itemId)
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "/api"}/news/${itemId}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: editingTitle,
-            content: editingContent,
-          }),
-        },
-      )
-
-      if (!response.ok) {
-        setError("Не удалось сохранить новость")
-        return
-      }
-
-      const payload = (await response.json()) as { item: NewsPost }
-
-      cancelEditing()
-      updateNewsItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                ...payload.item,
-                comments: item.comments,
-                commentsCount: item.commentsCount,
-                likedByMe: item.likedByMe,
-                likesCount: item.likesCount,
-              }
-            : item,
-        ),
-      )
-    } catch {
-      setError("Не удалось подключиться к API")
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  async function handleDelete(itemId: string) {
-    if (!window.confirm("Удалить эту новость?")) {
-      return
-    }
-
-    setError("")
-    setDeletingId(itemId)
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "/api"}/news/${itemId}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      )
-
-      if (!response.ok) {
-        setError("Не удалось удалить новость")
-        return
-      }
-
-      if (editingId === itemId) {
-        cancelEditing()
-      }
-
-      updateNewsItems((currentItems) =>
-        currentItems.filter((item) => item.id !== itemId),
-      )
-    } catch {
-      setError("Не удалось подключиться к API")
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  async function handleToggleLike(itemId: string) {
-    if (pendingLikeIdsRef.current.has(itemId)) {
-      return
-    }
-
-    pendingLikeIdsRef.current.add(itemId)
-    setError("")
-    const previousItems = items
-
-    updateNewsItems((currentItems) =>
-      currentItems.map((item) => {
-        if (item.id !== itemId) {
-          return item
-        }
-
-        const likedByMe = !item.likedByMe
-
-        return {
-          ...item,
-          likedByMe,
-          likesCount: Math.max(
-            0,
-            (item.likesCount ?? 0) + (likedByMe ? 1 : -1),
-          ),
-        }
-      }),
-    )
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "/api"}/news/${itemId}/like`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
-      )
-
-      if (!response.ok) {
-        setItems(previousItems)
-        cacheNews(previousItems)
-        setError("Не удалось обновить лайк")
-        return
-      }
-
-      const payload = (await response.json()) as {
-        liked: boolean
-        likesCount: number
-      }
-
-      updateNewsItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                likedByMe: payload.liked,
-                likesCount: payload.likesCount,
-              }
-            : item,
-        ),
-      )
-    } catch {
-      setItems(previousItems)
-      cacheNews(previousItems)
-      setError("Не удалось подключиться к API")
-    } finally {
-      pendingLikeIdsRef.current.delete(itemId)
-    }
-  }
-
-  async function handleCreateComment(
-    itemId: string,
-    event: React.FormEvent<HTMLFormElement>,
-    parentCommentId?: string,
-  ) {
-    event.preventDefault()
-    setError("")
-    setCommentingId(parentCommentId ?? itemId)
-
-    const form = event.currentTarget
-    const formData = new FormData(form)
-    const content = String(formData.get("content") ?? "").trim()
-    const targetParentCommentId =
-      parentCommentId || String(formData.get("parentId") ?? "").trim() || undefined
-
-    if (!content) {
-      setCommentingId(null)
-      return
-    }
-
-    const optimisticComment: NewsComment = {
-      id: `pending-${Date.now()}`,
-      content,
-      parentId: targetParentCommentId ?? null,
-      createdAt: new Date().toISOString(),
-      author: currentUser ?? {
-        id: "current-user",
-        name: "Вы",
-        email: "",
-      },
-      replies: [],
-    }
-
-    form.reset()
-    setReplyingToCommentId(null)
-
-    updateNewsItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === itemId
-          ? addCommentToPost(item, optimisticComment, targetParentCommentId)
-          : item,
-      ),
-    )
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "/api"}/news/${itemId}/comments`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            content,
-            parentId: targetParentCommentId,
-          }),
-        },
-      )
-
-      if (!response.ok) {
-        updateNewsItems((currentItems) =>
-          currentItems.map((item) =>
-            item.id === itemId
-              ? removeCommentFromPost(item, optimisticComment.id)
-              : item,
-          ),
-        )
-        setError("Не удалось добавить комментарий")
-        return
-      }
-
-      const payload = (await response.json()) as { comment: NewsComment }
-
-      updateNewsItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? replaceCommentInPost(item, optimisticComment.id, payload.comment)
-            : item,
-        ),
-      )
-    } catch {
-      updateNewsItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? removeCommentFromPost(item, optimisticComment.id)
-            : item,
-        ),
-      )
-      setError("Не удалось подключиться к API")
-    } finally {
-      setCommentingId(null)
-    }
-  }
-
   return (
     <SidebarProvider
       style={
@@ -1175,11 +644,7 @@ export default function NewsPage() {
       <AppSidebar variant="inset" />
       <SidebarInset className="h-svh overflow-y-auto">
         <SiteHeader title="Лента" onOpenFilters={() => setIsFiltersOpen(true)} />
-        <AttachmentPreviewSheet
-          attachment={previewAttachment}
-          onClose={() => setPreviewAttachment(null)}
-        />
-        <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
           <SheetContent
             side="left"
             className="w-[min(420px,calc(100vw-1rem))] overflow-y-auto p-4"
@@ -1372,365 +837,14 @@ export default function NewsPage() {
                 </Card>
               ) : null}
 
-              {filteredItems.map((item) => {
-                const isAuthor = item.author.id === currentUser?.id
-                const isEditing = editingId === item.id
-                const attachments = item.attachments ?? []
-                const comments = item.comments ?? []
-                const isCommentsExpanded = expandedCommentPostIds.includes(
-                  item.id,
-                )
-                const visibleComments = isCommentsExpanded
-                  ? comments
-                  : comments.slice(-3)
-
-                return (
-                  <Card key={item.id}>
-                  <CardHeader className="gap-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <Avatar size="lg">
-                          {item.author.avatar ? (
-                            <AvatarImage
-                              src={item.author.avatar}
-                              alt={item.author.name || item.author.email}
-                            />
-                          ) : null}
-                          <AvatarFallback className="bg-primary/10 font-medium text-primary">
-                            {getInitials(item.author.name, item.author.email)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">
-                            {item.author.name || item.author.email}
-                          </div>
-                          <CardDescription className={typographyStyles.muted}>
-                            {dateFormatter.format(
-                              new Date(item.publishedAt ?? item.createdAt),
-                            )}
-                          </CardDescription>
-                        </div>
-                      </div>
-                      {isAuthor ? (
-                        <div className="flex shrink-0 items-center gap-2">
-                          {isEditing ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              onClick={cancelEditing}
-                            >
-                              Отмена
-                            </Button>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                render={
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-muted-foreground data-open:bg-muted"
-                                  />
-                                }
-                              >
-                                <EllipsisVerticalIcon />
-                                <span className="sr-only">
-                                  Действия с новостью
-                                </span>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem
-                                  onClick={() => startEditing(item)}
-                                >
-                                  <PencilIcon />
-                                  <span>Редактировать</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  disabled={deletingId === item.id}
-                                  onClick={() => handleDelete(item.id)}
-                                >
-                                  <TrashIcon />
-                                  <span>
-                                    {deletingId === item.id
-                                      ? "Удаляем..."
-                                      : "Удалить"}
-                                  </span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="grid gap-4">
-                    {attachments.length > 0 ? (
-                      <NewsAttachments
-                        attachments={attachments}
-                        onOpenAttachment={setPreviewAttachment}
-                      />
-                    ) : null}
-                    {isEditing ? (
-                      <div className="flex flex-col gap-3">
-                        <Input
-                          value={editingTitle}
-                          minLength={3}
-                          onChange={(event) => setEditingTitle(event.target.value)}
-                        />
-                        <textarea
-                          value={editingContent}
-                          minLength={10}
-                          className="min-h-32 resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-                          onChange={(event) =>
-                            setEditingContent(event.target.value)
-                          }
-                        />
-                        <div className="flex items-center gap-3">
-                          <Button
-                            type="button"
-                            disabled={savingId === item.id}
-                            onClick={() => handleUpdate(item.id)}
-                          >
-                            {savingId === item.id ? "Сохраняем..." : "Сохранить"}
-                          </Button>
-                          {error ? (
-                            <p className="text-sm text-destructive">{error}</p>
-                          ) : null}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid gap-3">
-                        <CardTitle className={typographyStyles.h3}>
-                          {item.title}
-                        </CardTitle>
-                        <TypographyProse>
-                          {item.content}
-                        </TypographyProse>
-                      </div>
-                    )}
-                    <div className="grid gap-4 border-t pt-4">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            "gap-2 rounded-full",
-                            item.likedByMe &&
-                              "border-red-500 bg-red-500 text-white hover:bg-red-600 hover:text-white",
-                          )}
-                          onClick={() => handleToggleLike(item.id)}
-                        >
-                          <HeartIcon
-                            className={cn(
-                              "size-4",
-                              item.likedByMe && "fill-current",
-                            )}
-                          />
-                          {item.likesCount ?? 0}
-                        </Button>
-                        <div className="flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm text-muted-foreground">
-                          <MessageCircleIcon className="size-4" />
-                          {item.commentsCount ?? comments.length}
-                        </div>
-                      </div>
-
-                      {comments.length > 0 ? (
-                        <div className="grid gap-3">
-                          {comments.length > visibleComments.length ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="justify-start px-0 text-muted-foreground"
-                              onClick={() =>
-                                setExpandedCommentPostIds((postIds) => [
-                                  ...postIds,
-                                  item.id,
-                                ])
-                              }
-                            >
-                              Показать все комментарии ({comments.length})
-                            </Button>
-                          ) : null}
-                          {visibleComments.map((comment) => (
-                            <div
-                              key={comment.id}
-                              className="grid gap-3 rounded-xl bg-muted/35 p-3"
-                            >
-                              <div className="flex gap-3">
-                                <Avatar className="size-8">
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(
-                                      comment.author.name,
-                                      comment.author.email,
-                                    )}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                    <span className="text-sm font-medium">
-                                      {comment.author.name ||
-                                        comment.author.email}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {dateFormatter.format(
-                                        new Date(comment.createdAt),
-                                      )}
-                                    </span>
-                                  </div>
-                                  <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                                    {comment.content}
-                                  </p>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="xs"
-                                    className="mt-1 px-0 text-muted-foreground"
-                                    onClick={() =>
-                                      setReplyingToCommentId(comment.id)
-                                    }
-                                  >
-                                    Ответить
-                                  </Button>
-                                </div>
-                              </div>
-                              {(comment.replies?.length ?? 0) > 0 ||
-                              replyingToCommentId === comment.id ? (
-                                <div className="relative ml-5 grid gap-3 pl-9">
-                                  <div className="absolute bottom-0 left-2 top-1 w-4 rounded-full bg-muted" />
-                                  {(comment.replies?.length ?? 0) > 0 ? (
-                                    <TypographyMuted className="relative text-xs">
-                                      {comment.author.name ||
-                                        comment.author.email}{" "}
-                                      ответил · {comment.replies?.length}{" "}
-                                      ответов
-                                    </TypographyMuted>
-                                  ) : null}
-                                  {comment.replies?.map((reply) => (
-                                    <div
-                                      key={reply.id}
-                                      className="relative flex gap-2"
-                                    >
-                                      <Avatar className="size-7">
-                                        <AvatarFallback className="text-[10px]">
-                                          {getInitials(
-                                            reply.author.name,
-                                            reply.author.email,
-                                          )}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                          <span className="text-sm font-medium">
-                                            {reply.author.name ||
-                                              reply.author.email}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {dateFormatter.format(
-                                              new Date(reply.createdAt),
-                                            )}
-                                          </span>
-                                        </div>
-                                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                                          {reply.content}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  {replyingToCommentId === comment.id ? (
-                                    <form
-                                      className="relative grid gap-2 rounded-xl bg-background/80 p-3"
-                                      onSubmit={(event) =>
-                                        handleCreateComment(
-                                          item.id,
-                                          event,
-                                          comment.id,
-                                        )
-                                      }
-                                    >
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>ответ</span>
-                                        <span className="font-medium text-primary">
-                                          {comment.author.name ||
-                                            comment.author.email}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          className="text-muted-foreground hover:text-foreground"
-                                          onClick={() =>
-                                            setReplyingToCommentId(null)
-                                          }
-                                        >
-                                          ×
-                                        </button>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <input
-                                          type="hidden"
-                                          name="parentId"
-                                          value={comment.id}
-                                        />
-                                        <Input
-                                          name="content"
-                                          placeholder="Написать ответ"
-                                          minLength={1}
-                                          maxLength={1000}
-                                          defaultValue={`${
-                                            comment.author.name ||
-                                            comment.author.email
-                                          }, `}
-                                          disabled={
-                                            commentingId === comment.id
-                                          }
-                                        />
-                                        <Button
-                                          type="submit"
-                                          size="sm"
-                                          disabled={
-                                            commentingId === comment.id
-                                          }
-                                        >
-                                          Ответить
-                                        </Button>
-                                      </div>
-                                    </form>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      <form
-                        className="flex items-center gap-2"
-                        onSubmit={(event) =>
-                          handleCreateComment(item.id, event)
-                        }
-                      >
-                        <Input
-                          name="content"
-                          placeholder="Написать комментарий"
-                          minLength={1}
-                          maxLength={1000}
-                          disabled={commentingId === item.id}
-                        />
-                        <Button
-                          type="submit"
-                          size="sm"
-                          disabled={commentingId === item.id}
-                        >
-                          Отправить
-                        </Button>
-                      </form>
-                    </div>
-                  </CardContent>
-                  </Card>
-                )
-              })}
+              {filteredItems.map((item) => (
+                <NewsPostCard
+                  key={item.id}
+                  initialItem={item}
+                  currentUser={currentUser}
+                  onDelete={(id) => updateNewsItems((currentItems) => currentItems.filter((i) => i.id !== id))}
+                />
+              ))}
             </section>
             <aside className="mx-auto hidden w-full max-w-[760px] gap-4 xl:sticky xl:top-[calc(var(--header-height)+1.5rem)] xl:grid xl:max-h-[calc(100svh-var(--header-height)-3rem)] xl:max-w-none xl:self-start xl:overflow-y-auto xl:px-1">
               <Card size="sm" className="bg-primary/5">
@@ -1765,5 +879,13 @@ export default function NewsPage() {
         />
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+export default function NewsPage() {
+  return (
+    <React.Suspense fallback={<div>Загрузка ленты...</div>}>
+      <NewsPageContent />
+    </React.Suspense>
   )
 }

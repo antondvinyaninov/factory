@@ -5,9 +5,13 @@ import { AppService } from './app.service';
 import { DatabaseHealthService } from './database/database-health.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { EmployeesModule } from './modules/employees/employees.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { NewsModule } from './modules/news/news.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { UsersModule } from './modules/users/users.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -20,6 +24,10 @@ import { TasksModule } from './modules/tasks/tasks.module';
     NewsModule,
     TasksModule,
     MessagesModule,
+    EmployeesModule,
+    UsersModule,
+    NotificationsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],

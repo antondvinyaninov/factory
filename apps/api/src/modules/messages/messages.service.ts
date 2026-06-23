@@ -69,7 +69,34 @@ export class MessagesService {
       include: conversationInclude,
     });
 
-    return conversations.map(formatConversation);
+    return Promise.all(
+      conversations.map(async (conv) => {
+        const formatted = formatConversation(conv);
+        const myParticipant = conv.participants.find(p => p.userId === user.id);
+        
+        const lastMessage = formatted.lastMessage as any;
+        let unreadCount = 0;
+        if (lastMessage && lastMessage.authorId !== user.id) {
+          if (!myParticipant?.lastReadAt) {
+            unreadCount = 1;
+          } else {
+            const count = await this.prisma.chatMessage.count({
+              where: {
+                conversationId: conv.id,
+                createdAt: { gt: myParticipant.lastReadAt },
+                authorId: { not: user.id },
+              },
+            });
+            unreadCount = count;
+          }
+        }
+        
+        return {
+          ...formatted,
+          unreadCount,
+        };
+      }),
+    );
   }
 
   async createConversation(dto: CreateConversationDto, creator: AuthUser) {
@@ -158,6 +185,23 @@ export class MessagesService {
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
+    }
+
+    // Update lastReadAt for the participant
+    try {
+      await this.prisma.conversationParticipant.update({
+        where: {
+          conversationId_userId: {
+            conversationId,
+            userId: user.id,
+          },
+        },
+        data: {
+          lastReadAt: new Date(),
+        },
+      });
+    } catch (e) {
+      // Ignore read receipt update error if participant doesn't exist
     }
 
     return afterDate ? conversation.messages : conversation.messages.reverse();

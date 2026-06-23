@@ -6,11 +6,9 @@ import Link from "next/link"
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -25,40 +23,14 @@ import {
   IconListDetails,
   IconMessages,
   IconReport,
-  IconSearch,
   IconSettings,
+  IconUser,
   IconUsers,
+  IconBrain,
 } from "@tabler/icons-react"
 import { getCurrentUserCached } from "@/lib/auth-client"
 
 const data = {
-  navMain: [
-    {
-      title: "Обзор",
-      url: "/dashboard",
-      icon: <IconDashboard />,
-    },
-    {
-      title: "Лента",
-      url: "/news",
-      icon: <IconListDetails />,
-    },
-    {
-      title: "Сообщения",
-      url: "/messages",
-      icon: <IconMessages />,
-    },
-    {
-      title: "Задачи",
-      url: "/tasks",
-      icon: <IconFolder />,
-    },
-    {
-      title: "Сотрудники",
-      url: "#",
-      icon: <IconUsers />,
-    },
-  ],
   navSecondary: [
     {
       title: "Настройки",
@@ -69,11 +41,6 @@ const data = {
       title: "Помощь",
       url: "#",
       icon: <IconHelp />,
-    },
-    {
-      title: "Поиск",
-      url: "#",
-      icon: <IconSearch />,
     },
   ],
   documents: [
@@ -96,12 +63,14 @@ const data = {
 }
 
 type SidebarUser = {
+  id: string
   name: string
   email: string
   avatar: string
 }
 
 const fallbackUser: SidebarUser = {
+  id: "",
   name: "Пользователь",
   email: "Загрузка...",
   avatar: "",
@@ -122,6 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
 
         setUser({
+          id: user.id,
           name: user.name ?? user.email,
           email: user.email,
           avatar: "",
@@ -137,6 +107,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isMounted = false
     }
   }, [])
+
+  const navMainItems = React.useMemo(() => [
+    {
+      title: "Обзор",
+      url: "/dashboard",
+      icon: <IconDashboard />,
+    },
+    {
+      title: "Профиль",
+      url: user.id ? `/profile/${user.id}` : "#",
+      icon: <IconUser />,
+    },
+    {
+      title: "Лента",
+      url: "/news",
+      icon: <IconListDetails />,
+    },
+    {
+      title: "Сообщения",
+      url: "/messages",
+      icon: <IconMessages />,
+    },
+    {
+      title: "Задачи",
+      url: "/tasks",
+      icon: <IconFolder />,
+    },
+    {
+      title: "Сотрудники",
+      url: "/employees",
+      icon: <IconUsers />,
+    },
+    {
+      title: "AI Ассистент",
+      url: "/ai-assistant",
+      icon: <IconBrain />,
+    },
+  ], [user.id])
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -158,13 +166,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainItems} />
         <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} />
-      </SidebarFooter>
     </Sidebar>
   )
 }

@@ -14,6 +14,14 @@ enum UserRole {
   USER
 }
 
+enum WorkStatus {
+  IN_OFFICE
+  REMOTE
+  VACATION
+  SICK_LEAVE
+  BUSINESS_TRIP
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -29,38 +37,59 @@ enum TaskPriority {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         UserRole @default(USER)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  newsPosts    NewsPost[]
-  newsLikes    NewsLike[]
-  newsComments NewsComment[]
-  createdTasks Task[] @relation("TaskCreator")
-  assignedTasks Task[] @relation("TaskAssignee")
-  createdConversations Conversation[] @relation("ConversationCreator")
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique
+  passwordHash             String
+  name                     String
+  personnelNumber          String?
+  lastName                 String?
+  firstName                String?
+  middleName               String?
+  birthDate                DateTime?
+  hireDate                 DateTime?
+  terminationDate          DateTime?
+  department               String?
+  unitBureau               String?
+  position                 String?
+  managerName              String?
+  phones                   Json                      @default("[]")
+  photoUrl                 String?
+  workStatus               WorkStatus                @default(IN_OFFICE)
+  location                 String?
+  bio                      String?
+  skills                   Json                      @default("[]")
+  role                     UserRole                  @default(USER)
+  isActive                 Boolean                   @default(true)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  newsPosts                NewsPost[]
+  newsLikes                NewsLike[]
+  newsComments             NewsComment[]
+  createdTasks             Task[]                    @relation("TaskCreator")
+  assignedTasks            Task[]                    @relation("TaskAssignee")
+  createdConversations     Conversation[]            @relation("ConversationCreator")
   conversationParticipants ConversationParticipant[]
-  chatMessages ChatMessage[]
+  chatMessages             ChatMessage[]
+  notifications            Notification[]
 
   @@index([isActive, name, email])
+  @@index([personnelNumber])
+  @@index([isActive, lastName, firstName, middleName])
+  @@index([department, unitBureau])
   @@map("users")
 }
 
 model NewsPost {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   content     String
-  attachments Json      @default("[]")
-  isPublished Boolean   @default(true)
+  attachments Json          @default("[]")
+  isPublished Boolean       @default(true)
   publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   authorId    String
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   likes       NewsLike[]
   comments    NewsComment[]
 
@@ -83,15 +112,15 @@ model NewsLike {
 }
 
 model NewsComment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   content   String
   postId    String
   authorId  String
   parentId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  post      NewsPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  post      NewsPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parent    NewsComment?  @relation("NewsCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   NewsComment[] @relation("NewsCommentReplies")
 
@@ -171,3 +200,21 @@ model ChatMessage {
   @@index([authorId])
   @@map("chat_messages")
 }
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  type      String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
