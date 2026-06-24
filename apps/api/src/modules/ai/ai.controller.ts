@@ -31,7 +31,7 @@ export class AiController {
   @Post('chat')
   async chat(
     @Req() request: Request,
-    @Body() body: { messages: Array<{ role: 'user' | 'assistant'; content: string }>; model?: string },
+    @Body() body: { messages: Array<{ role: 'user' | 'assistant'; content: any }>; model?: string; systemPromptOverride?: string },
   ) {
     const user = await this.getUser(request);
     
@@ -39,7 +39,7 @@ export class AiController {
       throw new UnauthorizedException('Invalid payload');
     }
 
-    return this.aiService.chat(body.messages, user, body.model);
+    return this.aiService.chat(body.messages, user, body.model, body.systemPromptOverride);
   }
 
   private async getUser(request: Request): Promise<AuthUser> {

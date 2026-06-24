@@ -31,6 +31,7 @@ import {
   IconBrain,
   IconSparkles,
   IconLifebuoy,
+  IconScan,
 } from "@tabler/icons-react"
 import { getCurrentUserCached } from "@/lib/auth-client"
 
@@ -152,6 +153,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "AI Ассистент",
       url: "/ai-assistant",
       icon: <IconBrain />,
+    },
+    {
+      title: "AI Сканер",
+      url: "/document-scanner",
+      icon: <IconScan />,
     },
   ], [user.id])
 

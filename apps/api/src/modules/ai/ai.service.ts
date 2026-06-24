@@ -123,16 +123,17 @@ ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.auth
   }
 
   async chat(
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    messages: Array<{ role: 'user' | 'assistant'; content: any }>,
     currentUser: AuthUser,
     model?: string,
+    systemPromptOverride?: string,
   ): Promise<{ content: string; setupRequired?: boolean }> {
     if (!this.openai || !this.apiKey) {
       return { content: '', setupRequired: true };
     }
 
     const selectedModel = model || process.env.OPENAI_MODEL || 'deepseek-v4-flash';
-    const systemPrompt = await this.buildContext(currentUser);
+    const systemPrompt = systemPromptOverride || await this.buildContext(currentUser);
 
     try {
       if (RESPONSES_API_MODELS.has(selectedModel)) {
@@ -175,7 +176,7 @@ ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.auth
    * OpenAI Chat Completions API (/v1/chat/completions)
    */
   private async chatViaOpenAI(
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    messages: Array<{ role: 'user' | 'assistant'; content: any }>,
     systemPrompt: string,
     selectedModel: string,
   ): Promise<{ content: string }> {
@@ -208,7 +209,7 @@ ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.auth
    * Используется для gpt-5.5, gpt-5.4 и подобных
    */
   private async chatViaResponsesApi(
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    messages: Array<{ role: 'user' | 'assistant'; content: any }>,
     systemPrompt: string,
     selectedModel: string,
   ): Promise<{ content: string }> {
@@ -279,14 +280,41 @@ ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.auth
    * Используется для qwen, minimax и др.
    */
   private async chatViaAnthropic(
-    messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    messages: Array<{ role: 'user' | 'assistant'; content: any }>,
     systemPrompt: string,
     selectedModel: string,
   ): Promise<{ content: string }> {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-      content: m.content,
-    }));
+    const formattedMessages = messages.map((m) => {
+      let content = m.content;
+      
+      // Конвертация формата OpenAI в формат Anthropic для multimodal
+      if (Array.isArray(m.content)) {
+        content = m.content.map((part) => {
+          if (part.type === 'text') {
+            return { type: 'text', text: part.text };
+          }
+          if (part.type === 'image_url') {
+            const match = part.image_url.url.match(/^data:(image\/[a-zA-Z0-9]+);base64,(.+)$/);
+            if (match) {
+              return {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: match[1],
+                  data: match[2]
+                }
+              };
+            }
+          }
+          return part;
+        });
+      }
+
+      return {
+        role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+        content,
+      };
+    });
 
     const response = await this.anthropic!.messages.create({
       model: selectedModel,
