@@ -32,7 +32,7 @@ export class AiService {
   constructor(private readonly prisma: PrismaService) {
     this.apiKey = process.env.OPENAI_API_KEY;
     this.baseUrl =
-      process.env.OPENAI_BASE_URL || 'https://api.vibemod.pro/v1';
+      process.env.OPENAI_BASE_URL || 'https://r-api.vibemod.pro/v1';
 
     if (this.apiKey) {
       this.openai = new OpenAI({ 
