@@ -15,6 +15,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { WorkShiftsModule } from './modules/work-shifts/work-shifts.module';
+import { DiskModule } from './modules/disk/disk.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { WorkShiftsModule } from './modules/work-shifts/work-shifts.module';
     DocumentsModule,
     TicketsModule,
     WorkShiftsModule,
+    DiskModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseHealthService],
