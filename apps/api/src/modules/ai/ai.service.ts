@@ -6,8 +6,6 @@ import Anthropic from '@anthropic-ai/sdk';
 
 // Модели через Anthropic API формат (/v1/messages)
 const ANTHROPIC_FORMAT_MODELS = new Set([
-  'qwen3.7-plus',
-  'qwen3.7-max',
   'minimax-m3',
 ]);
 
@@ -167,7 +165,7 @@ ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.auth
       throw new BadRequestException(
         errMsg.includes('upstream')
           ? `Модель ${selectedModel} сейчас недоступна. Попробуйте другую.`
-          : 'Ошибка при обращении к ИИ-ассистенту.',
+          : `Ошибка ИИ: ${errMsg}`,
       );
     }
   }
@@ -216,10 +214,30 @@ ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.auth
     const baseWithoutSlash = this.baseUrl.replace(/\/$/, '');
     const url = `${baseWithoutSlash}/responses`;
 
-    const input = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const input = messages.map((m) => {
+      let content = m.content;
+      if (Array.isArray(m.content)) {
+        content = m.content.map(part => {
+          if (part.type === 'text') {
+            return { type: 'input_text', text: part.text };
+          }
+          if (part.type === 'image_url') {
+            return { 
+              type: 'input_image', 
+              image_url: typeof part.image_url === 'object' ? part.image_url.url : part.image_url 
+            };
+          }
+          return part;
+        });
+      } else if (typeof m.content === 'string') {
+        content = [{ type: 'input_text', text: m.content }];
+      }
+
+      return {
+        role: m.role,
+        content,
+      };
+    });
 
     const body = {
       model: selectedModel,

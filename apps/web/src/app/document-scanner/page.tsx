@@ -22,7 +22,10 @@ import {
   BrainIcon,
   UploadIcon,
   FileIcon,
-  XIcon
+  XIcon,
+  PencilIcon,
+  CheckIcon as CheckLineIcon,
+  CopyIcon
 } from "lucide-react"
 
 // Конфигурация pdf.js worker
@@ -52,9 +55,8 @@ type ModelOption = {
 
 const MODELS: ModelOption[] = [
   { id: "gpt-5.5", label: "GPT-5.5 Vision", description: "OpenAI флагман", icon: <SparklesIcon className="size-3.5 text-green-500" />, badge: "Рекомендуем" },
-  { id: "qwen3.7-max", label: "Qwen 3.7 Max", description: "Alibaba · мощная", icon: <BrainIcon className="size-3.5 text-orange-500" /> },
-  { id: "qwen3.7-plus", label: "Qwen 3.7 Plus", description: "Alibaba · быстрая", icon: <ZapIcon className="size-3.5 text-orange-400" /> },
-  { id: "deepseek-v4-pro", label: "DeepSeek Pro", description: "Мощный · reasoning", icon: <BrainIcon className="size-3.5 text-blue-500" /> },
+  { id: "gpt-5.4", label: "GPT-5.4 Vision", description: "Быстрая модель", icon: <ZapIcon className="size-3.5 text-blue-500" /> },
+  { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", description: "Самая легкая", icon: <ZapIcon className="size-3.5 text-blue-400" /> },
 ]
 
 function parseMarkdown(text: string): string {
@@ -135,6 +137,66 @@ function ModelSelector({
   )
 }
 
+function EditableAssistantMessage({ messageId, initialContent, onSave }: { messageId: string, initialContent: string, onSave: (val: string) => void }) {
+  const [isEditing, setIsEditing] = React.useState(false)
+  const [content, setContent] = React.useState(initialContent)
+  const [copied, setCopied] = React.useState(false)
+
+  // Обновляем контент, если он изменился снаружи (например, догрузился стрим)
+  React.useEffect(() => {
+    if (!isEditing) setContent(initialContent)
+  }, [initialContent, isEditing])
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (isEditing) {
+    return (
+      <div className="flex flex-col gap-2 w-full min-w-[300px]">
+        <textarea
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          className="w-full min-h-[150px] p-2 text-sm bg-background border rounded-md focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setContent(initialContent); setIsEditing(false) }}>
+            Отмена
+          </Button>
+          <Button size="sm" onClick={() => { onSave(content); setIsEditing(false) }}>
+            Сохранить
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative group/edit">
+      <div className="prose prose-sm dark:prose-invert break-words" dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }} />
+      
+      <div className="absolute -top-3 -right-3 opacity-0 group-hover/edit:opacity-100 transition-opacity flex items-center gap-1 bg-background border shadow-sm rounded-lg p-0.5">
+        <button
+          onClick={handleCopy}
+          title="Скопировать текст"
+          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+        >
+          {copied ? <CheckLineIcon className="size-3.5 text-green-500" /> : <CopyIcon className="size-3.5" />}
+        </button>
+        <button
+          onClick={() => setIsEditing(true)}
+          title="Редактировать текст"
+          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+        >
+          <PencilIcon className="size-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function DocumentScannerPage() {
   const [currentUser, setCurrentUser] = React.useState<ChatUser | null>(null)
   const [messages, setMessages] = React.useState<Message[]>([])
@@ -143,7 +205,7 @@ export default function DocumentScannerPage() {
   const [error, setError] = React.useState("")
   const [selectedModel, setSelectedModel] = React.useState<ModelOption>(MODELS[0])
   
-  const [previewImage, setPreviewImage] = React.useState<string | null>(null)
+  const [previewImages, setPreviewImages] = React.useState<string[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
 
@@ -178,27 +240,32 @@ export default function DocumentScannerPage() {
       if (file.type === "application/pdf") {
         const arrayBuffer = await file.arrayBuffer()
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
-        const page = await pdf.getPage(1)
+        const numPages = pdf.numPages
+        const images: string[] = []
+
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i)
+          const viewport = page.getViewport({ scale: 2.0 })
+          const canvas = document.createElement("canvas")
+          const ctx = canvas.getContext("2d")
+          if (!ctx) throw new Error("Canvas not supported")
+          
+          canvas.height = viewport.height
+          canvas.width = viewport.width
+          
+          await page.render({ canvasContext: ctx, viewport }).promise
+          
+          images.push(canvas.toDataURL("image/jpeg", 0.8))
+        }
         
-        const viewport = page.getViewport({ scale: 2.0 })
-        const canvas = document.createElement("canvas")
-        const ctx = canvas.getContext("2d")
-        if (!ctx) throw new Error("Canvas not supported")
-        
-        canvas.height = viewport.height
-        canvas.width = viewport.width
-        
-        await page.render({ canvasContext: ctx, viewport }).promise
-        
-        const base64Image = canvas.toDataURL("image/jpeg", 0.9)
-        setPreviewImage(base64Image)
+        setPreviewImages(images)
         if (messages.length === 0 && !inputValue) {
           setInputValue("Пожалуйста, распознай текст из этого документа. Если что-то неразборчиво, укажи это в скобках [неразборчиво].")
         }
       } else if (file.type.startsWith("image/")) {
         const reader = new FileReader()
         reader.onload = (event) => {
-          setPreviewImage(event.target?.result as string)
+          setPreviewImages([event.target?.result as string])
           if (messages.length === 0 && !inputValue) {
             setInputValue("Пожалуйста, распознай текст из этого документа. Если что-то неразборчиво, укажи это в скобках [неразборчиво].")
           }
@@ -218,23 +285,25 @@ export default function DocumentScannerPage() {
 
   async function handleSend() {
     const trimmed = inputValue.trim()
-    if ((!trimmed && !previewImage) || isLoading) return
+    if ((!trimmed && previewImages.length === 0) || isLoading) return
 
     setError("")
     setIsLoading(true)
 
     let contentPayload: any = trimmed
     
-    if (previewImage) {
+    if (previewImages.length > 0) {
       contentPayload = []
       if (trimmed) {
         contentPayload.push({ type: "text", text: trimmed })
       } else {
-        contentPayload.push({ type: "text", text: "Распознай текст на этом изображении." })
+        contentPayload.push({ type: "text", text: "Распознай текст на этих изображениях." })
       }
-      contentPayload.push({
-        type: "image_url",
-        image_url: { url: previewImage }
+      previewImages.forEach(img => {
+        contentPayload.push({
+          type: "image_url",
+          image_url: { url: img }
+        })
       })
     }
 
@@ -248,7 +317,7 @@ export default function DocumentScannerPage() {
     const nextMessages = [...messages, userMessage]
     setMessages(nextMessages)
     setInputValue("")
-    setPreviewImage(null)
+    // setPreviewImage(null) - Убрали, чтобы скан оставался на экране
 
     try {
       const systemPromptOverride = `Ты — экспертный ИИ-сканер документов для корпоративного портала Factory 1.0. 
@@ -257,11 +326,12 @@ export default function DocumentScannerPage() {
 Если какой-то фрагмент текста неразборчив из-за качества скана, укажи это в скобках: [неразборчиво] или [неразборчиво: похоже на X].
 Сохраняй структуру документа (таблицы, абзацы, списки) насколько это возможно в текстовом формате.`
 
-      const response = await fetch("/api/ai/chat", {
+      const response = await fetch("http://localhost:3001/ai/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
+        credentials: "include",
         body: JSON.stringify({
           messages: nextMessages.map(m => ({
             role: m.role,
@@ -272,7 +342,24 @@ export default function DocumentScannerPage() {
         })
       })
 
-      if (!response.ok) throw new Error("Не удалось получить ответ от ассистента.")
+      if (!response.ok) {
+        let errMsg = "Не удалось получить ответ от ассистента."
+        try {
+          const rawText = await response.text()
+          try {
+            const errData = JSON.parse(rawText)
+            const apiMsg = errData?.message || errData?.error?.message || ""
+            if (apiMsg.toLowerCase().includes("upstream")) {
+              errMsg = `Модель «${selectedModel.label}» сейчас недоступна. Попробуйте другую.`
+            } else if (apiMsg) {
+              errMsg = apiMsg
+            }
+          } catch {
+            errMsg = `Ошибка сервера (${response.status}): ${rawText.substring(0, 100)}...`
+          }
+        } catch {}
+        throw new Error(errMsg)
+      }
 
       const data = await response.json()
       
@@ -310,15 +397,19 @@ export default function DocumentScannerPage() {
                 Оригинал документа
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 p-0 flex flex-col items-center justify-center relative overflow-y-auto bg-grid-black/[0.02] dark:bg-grid-white/[0.02]">
-              {previewImage ? (
-                <div className="relative p-4 w-full h-full flex items-center justify-center min-h-[400px]">
-                  <img src={previewImage} alt="Скан" className="max-w-full max-h-[800px] object-contain rounded-md shadow-md border" />
+            <CardContent className="flex-1 p-0 flex flex-col relative overflow-y-auto bg-grid-black/[0.02] dark:bg-grid-white/[0.02]">
+              {previewImages.length > 0 ? (
+                <div className="relative p-4 w-full h-full flex flex-col items-center gap-4 min-h-[400px]">
+                  {previewImages.map((img, idx) => (
+                    <div key={idx} className="relative w-full flex justify-center">
+                      <img src={img} alt={`Скан страница ${idx + 1}`} className="max-w-full object-contain rounded-md shadow-md border bg-white" />
+                    </div>
+                  ))}
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="absolute top-4 right-4 rounded-full shadow-lg"
-                    onClick={() => setPreviewImage(null)}
+                    className="absolute top-4 right-4 rounded-full shadow-lg sticky"
+                    onClick={() => setPreviewImages([])}
                   >
                     <XIcon className="size-4" />
                   </Button>
@@ -382,13 +473,19 @@ export default function DocumentScannerPage() {
                         )}
                         <div className={cn("flex flex-col max-w-[85%]", isMine && "items-end")}>
                           <div className={cn(
-                            "rounded-2xl px-4 py-2.5 shadow-xs border text-sm leading-6",
+                            "rounded-2xl px-4 py-2.5 shadow-xs border text-sm leading-6 relative group/msg",
                             isMine ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 border-border"
                           )}>
                             {isMine ? (
                               <p className="whitespace-pre-wrap">{textContent}</p>
                             ) : (
-                              <div className="prose prose-sm dark:prose-invert break-words" dangerouslySetInnerHTML={{ __html: parseMarkdown(textContent) }} />
+                              <EditableAssistantMessage 
+                                messageId={message.id} 
+                                initialContent={textContent} 
+                                onSave={(newContent) => {
+                                  setMessages(prev => prev.map(m => m.id === message.id ? { ...m, content: newContent } : m))
+                                }}
+                              />
                             )}
                           </div>
                         </div>
@@ -422,10 +519,10 @@ export default function DocumentScannerPage() {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Инструкция для ИИ (например: 'Извлеки только таблицу')"
-                  disabled={isLoading || (!previewImage && messages.length === 0)}
+                  disabled={isLoading || (previewImages.length === 0 && messages.length === 0)}
                   className="flex-1 bg-background"
                 />
-                <Button type="submit" disabled={isLoading || (!inputValue.trim() && !previewImage)} size="icon">
+                <Button type="submit" disabled={isLoading || (!inputValue.trim() && previewImages.length === 0)} size="icon">
                   <SendIcon className="size-4" />
                 </Button>
               </div>
