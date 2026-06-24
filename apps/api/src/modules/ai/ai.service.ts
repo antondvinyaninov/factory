@@ -50,7 +50,7 @@ export class AiService {
   }
 
   private async buildContext(currentUser: AuthUser): Promise<string> {
-    const [tasks, news, totalUsers, departments] = await Promise.all([
+    const [tasks, news, totalUsers, departments, tickets, documents] = await Promise.all([
       this.prisma.task.findMany({
         where: {
           OR: [
@@ -99,6 +99,30 @@ export class AiService {
         select: { department: true },
         distinct: ['department'],
       }),
+      this.prisma.ticket.findMany({
+        where: {
+          OR: [
+            { authorId: currentUser.id },
+            { assigneeId: currentUser.id },
+          ],
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+        include: {
+          assignee: { select: { name: true, email: true } },
+          category: { select: { name: true } },
+        },
+      }),
+      this.prisma.document.findMany({
+        where: {
+          OR: [
+            { authorId: currentUser.id },
+            { approvalRoute: { some: { userId: currentUser.id, status: 'PENDING' } } },
+          ],
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 5,
+      }),
     ]);
 
     const deptList = departments
@@ -117,10 +141,16 @@ export class AiService {
 - Актуальные задачи (до 10):
 ${tasks.map((t, idx) => `${idx + 1}. [${t.status}] "${t.title}" (Исполнитель: ${t.assignee?.name || t.assignee?.email || 'Не назначен'}, Срок: ${t.dueAt ? t.dueAt.toISOString().slice(0, 16).replace('T', ' ') : 'Без срока'})`).join('\n') || 'Задачи отсутствуют.'}
 
+- Заявки в техподдержку (до 5):
+${tickets.map((t, idx) => `${idx + 1}. [${t.status}] "${t.title}" (Категория: ${t.category?.name || 'Нет'}, Исполнитель: ${t.assignee?.name || t.assignee?.email || 'Не назначен'})`).join('\n') || 'Заявки отсутствуют.'}
+
+- Документы и согласования (до 5):
+${documents.map((d, idx) => `${idx + 1}. [${d.status}] "${d.title}"`).join('\n') || 'Документы отсутствуют.'}
+
 - Последние новости (до 5):
 ${news.map((n, idx) => `${idx + 1}. "${n.title}" от ${n.author?.name || n.author?.email || 'Система'} (${n.publishedAt ? n.publishedAt.toISOString().slice(0, 10) : 'Без даты'})`).join('\n') || 'Публикации отсутствуют.'}
 
-Ссылки: задачи → /tasks, сообщения → /messages, новости → /news.
+Ссылки: задачи → /tasks, сообщения → /messages, новости → /news, заявки → /tickets, документы → /documents.
 Если информация недоступна — сообщи об этом вежливо.`;
   }
 
