@@ -321,17 +321,16 @@ export default function DocumentScannerPage() {
 
     try {
       const systemPromptOverride = `Ты — экспертный ИИ-сканер документов для корпоративного портала Factory 1.0. 
-Твоя задача — извлечь текст из загруженного документа максимально точно, буква в букву.
+Tвоя задача — извлечь текст из загруженного документа максимально точно, буква в букву.
 Строго запрещено фантазировать, додумывать слова или числа.
 Если какой-то фрагмент текста неразборчив из-за качества скана, укажи это в скобках: [неразборчиво] или [неразборчиво: похоже на X].
 Сохраняй структуру документа (таблицы, абзацы, списки) насколько это возможно в текстовом формате.`
 
-      const response = await fetch("http://localhost:3001/ai/chat", {
+      const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        credentials: "include",
         body: JSON.stringify({
           messages: nextMessages.map(m => ({
             role: m.role,

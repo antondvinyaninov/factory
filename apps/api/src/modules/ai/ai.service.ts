@@ -9,7 +9,6 @@ const ANTHROPIC_FORMAT_MODELS = new Set([
   'minimax-m3',
 ]);
 
-// Модели через Responses API (/v1/responses, stream обязателен)
 const RESPONSES_API_MODELS = new Set([
   'gpt-5.5',
   'gpt-5.4',
@@ -33,14 +32,19 @@ export class AiService {
   constructor(private readonly prisma: PrismaService) {
     this.apiKey = process.env.OPENAI_API_KEY;
     this.baseUrl =
-      process.env.OPENAI_BASE_URL || 'https://api.neurogate.space/v1';
+      process.env.OPENAI_BASE_URL || 'https://api.vibemod.pro/v1';
 
     if (this.apiKey) {
-      this.openai = new OpenAI({ apiKey: this.apiKey, baseURL: this.baseUrl });
+      this.openai = new OpenAI({ 
+        apiKey: this.apiKey, 
+        baseURL: this.baseUrl,
+        defaultHeaders: { 'User-Agent': 'Factory/1.0' },
+      });
       const anthropicBase = this.baseUrl.replace(/\/v1\/?$/, '');
       this.anthropic = new Anthropic({
         apiKey: this.apiKey,
         baseURL: anthropicBase,
+        defaultHeaders: { 'User-Agent': 'Factory/1.0' },
       });
     }
   }

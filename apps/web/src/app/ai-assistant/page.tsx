@@ -70,6 +70,12 @@ const MODELS: ModelOption[] = [
     icon: <SparklesIcon className="size-3.5 text-purple-500" />,
   },
   {
+    id: "glm-5.2",
+    label: "GLM 5.2",
+    description: "Zhipu AI",
+    icon: <SparklesIcon className="size-3.5 text-purple-400" />,
+  },
+  {
     id: "kimi-k2.6",
     label: "Kimi K2.6",
     description: "Moonshot AI · reasoning",
@@ -88,8 +94,8 @@ const MODELS: ModelOption[] = [
     icon: <BrainIcon className="size-3.5 text-teal-500" />,
   },
   {
-    id: "vibe-lite-1",
-    label: "Vibe Lite",
+    id: "vibe-lite-1.5",
+    label: "Vibe Lite 1.5",
     description: "Ультрадешёвый",
     icon: <ZapIcon className="size-3.5 text-orange-400" />,
   },
