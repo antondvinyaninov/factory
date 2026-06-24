@@ -23,7 +23,12 @@ export function getDiskUploadsDir() {
 export function ensureDiskUploadsDir() {
   const dir = getDiskUploadsDir();
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch (err: any) {
+      console.error('Failed to create disk uploads directory:', err);
+      throw new BadRequestException(`Disk storage error: ${err.message}`);
+    }
   }
   return dir;
 }
@@ -59,8 +64,9 @@ export class DiskController {
         cb(null, ensureDiskUploadsDir());
       },
       filename: (req, file, cb) => {
-        // Fix encoding for cyrillic filenames if any
-        let filename = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        // Filename is already decoded correctly by modern multer/busboy
+        // We will just sanitize it to remove illegal path characters
+        let filename = file.originalname.replace(/[^a-zA-Z0-9.\-_а-яА-ЯёЁ ]/g, '_');
         
         // Ensure uniqueness to avoid overwriting
         if (existsSync(join(ensureDiskUploadsDir(), filename))) {
@@ -84,6 +90,12 @@ export class DiskController {
     if (!file) {
       throw new BadRequestException('File is required');
     }
+    
+    // Check if file was saved correctly
+    if (!existsSync(file.path)) {
+       throw new BadRequestException('File was not saved. Check server permissions.');
+    }
+    
     return { 
       name: file.filename, 
       size: file.size, 

@@ -59,11 +59,12 @@ export default function DiskPage() {
       if (res.ok) {
         await fetchFiles()
       } else {
-        alert("Ошибка при загрузке файла.")
+        const errorData = await res.json().catch(() => null)
+        alert(`Ошибка при загрузке файла: ${errorData?.message || res.statusText || 'Неизвестная ошибка'}`)
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e)
-      alert("Ошибка при загрузке файла.")
+      alert(`Ошибка при загрузке файла: ${e.message}`)
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) {
