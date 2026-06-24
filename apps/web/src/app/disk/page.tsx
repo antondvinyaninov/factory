@@ -51,7 +51,7 @@ export default function DiskPage() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const res = await fetch("/api/disk/upload", {
+      const res = await fetch("/internal-upload/disk", {
         method: "POST",
         body: formData,
       })
